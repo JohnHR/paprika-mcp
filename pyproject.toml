@@ -1,0 +1,13 @@
+[project]
+name = "paprika-mcp"
+version = "0.1.0"
+description = "MCP server for querying Paprika 3 recipe database"
+requires-python = ">=3.10"
+dependencies = ["mcp[cli]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
