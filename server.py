@@ -1,9 +1,11 @@
-"""Paprika 3 MCP Server — read-only tools for meal planning."""
+"""Paprika 3 MCP Server — tools for meal planning and recipe management."""
 
 import json
 import os
 import re
 import sqlite3
+import subprocess
+import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -24,9 +26,12 @@ mcp = FastMCP("paprika")
 _DATE_RE = re.compile(r"^(?:zz)?(\d{8})\b")
 
 
-def _get_db() -> sqlite3.Connection:
-    """Open a read-only connection to the Paprika database."""
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+def _get_db(read_only: bool = True) -> sqlite3.Connection:
+    """Open a connection to the Paprika database."""
+    if read_only:
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    else:
+        conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -100,6 +105,7 @@ def _recipe_to_dict(
     last_made_date, days_since = _last_made(date_categories)
 
     result = {
+        "id": pk,
         "name": (row["ZNAME"] or "").rstrip("."),
         "preference_score": score,
         "categories": categories,
@@ -244,6 +250,8 @@ def get_meal_history(weeks_back: int = 8) -> str:
             label = _DATE_RE.sub("", cat["ZNAME"]).strip()
 
             menus.append({
+                "category_id": cat["Z_PK"],
+                "category_name": cat["ZNAME"],
                 "date": d.isoformat(),
                 "label": label or "Menu",
                 "recipes": [r["ZNAME"].rstrip(".") for r in recipes],
@@ -251,6 +259,329 @@ def get_meal_history(weeks_back: int = 8) -> str:
 
         menus.sort(key=lambda m: m["date"], reverse=True)
         return json.dumps(menus, indent=2)
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+def create_meal_plan(
+    date_str: str, recipe_ids: list[int], label: str = "Menu"
+) -> str:
+    """Create a new meal plan by tagging recipes with a date-based category.
+
+    This creates a new category with the format "YYYYMMDD {label}" and associates
+    the specified recipes with it. The app will be restarted automatically to
+    display the new meal plan.
+
+    Args:
+        date_str: Date in YYYY-MM-DD format (e.g., "2026-02-15")
+        recipe_ids: List of recipe Z_PK IDs to include in the meal plan
+        label: Label for the meal (default "Menu", can be "Dinner", "BIRTHDAY menu", etc.)
+
+    Returns:
+        JSON with details about the created meal plan
+    """
+    conn = _get_db(read_only=False)
+    try:
+        # Parse and format the date
+        meal_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        category_name = f"{meal_date.strftime('%Y%m%d')} {label}"
+
+        # Get the next available category ID
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(Z_PK) FROM ZRECIPECATEGORY")
+        max_pk = cursor.fetchone()[0]
+        new_category_pk = (max_pk or 0) + 1
+
+        # Generate UUID for the category
+        category_uuid = str(uuid.uuid4()).upper()
+
+        # Insert the new category with ZISSYNCED=0 to mark it as a local change
+        cursor.execute(
+            """
+            INSERT INTO ZRECIPECATEGORY
+            (Z_PK, Z_ENT, Z_OPT, ZISSYNCED, ZORDERFLAG, ZPARENT, ZNAME, ZSTATUS, ZUID)
+            VALUES (?, 13, 1, 0, 0, NULL, ?, 'unmodified', ?)
+            """,
+            (new_category_pk, category_name, category_uuid),
+        )
+
+        # Update Z_PRIMARYKEY table
+        cursor.execute(
+            """
+            UPDATE Z_PRIMARYKEY
+            SET Z_MAX = ?
+            WHERE Z_NAME = 'RecipeCategory'
+            """,
+            (new_category_pk,),
+        )
+
+        # Link recipes to the category via the join table
+        for recipe_id in recipe_ids:
+            cursor.execute(
+                """
+                INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
+                VALUES (?, ?)
+                """,
+                (recipe_id, new_category_pk),
+            )
+
+        conn.commit()
+
+        # Get recipe names for the response
+        recipe_names = []
+        for recipe_id in recipe_ids:
+            row = cursor.execute(
+                "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
+            ).fetchone()
+            if row:
+                recipe_names.append(row["ZNAME"].rstrip("."))
+
+        result = {
+            "category_id": new_category_pk,
+            "category_name": category_name,
+            "date": date_str,
+            "recipes_added": recipe_names,
+            "recipe_count": len(recipe_names),
+        }
+
+        # Restart Paprika to make the changes visible
+        try:
+            subprocess.run(
+                ["killall", "Paprika Recipe Manager 3"],
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            subprocess.run(
+                ["open", "-a", "Paprika Recipe Manager 3"], check=True
+            )
+            result["app_restarted"] = True
+        except Exception as e:
+            result["app_restarted"] = False
+            result["restart_error"] = str(e)
+
+        return json.dumps(result, indent=2)
+
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
+    """Add a recipe to an existing category (tag the recipe with the category).
+
+    Args:
+        recipe_id: The recipe Z_PK ID to add
+        category_id: The category Z_PK ID to add the recipe to
+
+    Returns:
+        JSON with confirmation of the operation
+    """
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        # Check if the relationship already exists
+        existing = cursor.execute(
+            """
+            SELECT * FROM Z_12CATEGORIES
+            WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
+            """,
+            (recipe_id, category_id),
+        ).fetchone()
+
+        if existing:
+            # Get names for the message
+            recipe = cursor.execute(
+                "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
+            ).fetchone()
+            category = cursor.execute(
+                "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+            ).fetchone()
+
+            return json.dumps({
+                "success": False,
+                "message": f"Recipe '{recipe['ZNAME'].rstrip('.')}' is already in category '{category['ZNAME']}'",
+            })
+
+        # Add the relationship
+        cursor.execute(
+            """
+            INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
+            VALUES (?, ?)
+            """,
+            (recipe_id, category_id),
+        )
+        conn.commit()
+
+        # Get names for confirmation
+        recipe = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
+        ).fetchone()
+        category = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        ).fetchone()
+
+        result = {
+            "success": True,
+            "recipe_name": recipe["ZNAME"].rstrip("."),
+            "category_name": category["ZNAME"],
+        }
+
+        # Restart Paprika to make the changes visible
+        try:
+            subprocess.run(
+                ["killall", "Paprika Recipe Manager 3"],
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            subprocess.run(
+                ["open", "-a", "Paprika Recipe Manager 3"], check=True
+            )
+            result["app_restarted"] = True
+        except Exception as e:
+            result["app_restarted"] = False
+            result["restart_error"] = str(e)
+
+        return json.dumps(result, indent=2)
+
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
+    """Remove a recipe from a category (untag the recipe from the category).
+
+    Args:
+        recipe_id: The recipe Z_PK ID to remove
+        category_id: The category Z_PK ID to remove the recipe from
+
+    Returns:
+        JSON with confirmation of the operation
+    """
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        # Get names before deleting
+        recipe = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
+        ).fetchone()
+        category = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        ).fetchone()
+
+        # Delete the relationship
+        cursor.execute(
+            """
+            DELETE FROM Z_12CATEGORIES
+            WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
+            """,
+            (recipe_id, category_id),
+        )
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+
+        result = {
+            "success": deleted_count > 0,
+            "recipe_name": recipe["ZNAME"].rstrip(".") if recipe else None,
+            "category_name": category["ZNAME"] if category else None,
+            "message": f"Removed recipe from category" if deleted_count > 0 else "Recipe was not in this category",
+        }
+
+        # Restart Paprika to make the changes visible
+        if deleted_count > 0:
+            try:
+                subprocess.run(
+                    ["killall", "Paprika Recipe Manager 3"],
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+                subprocess.run(
+                    ["open", "-a", "Paprika Recipe Manager 3"], check=True
+                )
+                result["app_restarted"] = True
+            except Exception as e:
+                result["app_restarted"] = False
+                result["restart_error"] = str(e)
+
+        return json.dumps(result, indent=2)
+
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+def delete_category(category_id: int) -> str:
+    """Delete a category and remove all recipe associations with it.
+
+    This will delete the category and clean up all references in the join table,
+    but will NOT delete the recipes themselves.
+
+    Args:
+        category_id: The category Z_PK ID to delete
+
+    Returns:
+        JSON with confirmation of the operation
+    """
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        # Get category name before deleting
+        category = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        ).fetchone()
+
+        if not category:
+            return json.dumps({
+                "success": False,
+                "message": f"Category with ID {category_id} not found",
+            })
+
+        category_name = category["ZNAME"]
+
+        # Delete all recipe associations
+        cursor.execute(
+            "DELETE FROM Z_12CATEGORIES WHERE Z_13CATEGORIES = ?",
+            (category_id,),
+        )
+        recipes_unlinked = cursor.rowcount
+
+        # Delete the category itself
+        cursor.execute(
+            "DELETE FROM ZRECIPECATEGORY WHERE Z_PK = ?",
+            (category_id,),
+        )
+
+        conn.commit()
+
+        result = {
+            "success": True,
+            "category_name": category_name,
+            "recipes_unlinked": recipes_unlinked,
+            "message": f"Deleted category '{category_name}' and unlinked {recipes_unlinked} recipe(s)",
+        }
+
+        # Restart Paprika to make the changes visible
+        try:
+            subprocess.run(
+                ["killall", "Paprika Recipe Manager 3"],
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            subprocess.run(
+                ["open", "-a", "Paprika Recipe Manager 3"], check=True
+            )
+            result["app_restarted"] = True
+        except Exception as e:
+            result["app_restarted"] = False
+            result["restart_error"] = str(e)
+
+        return json.dumps(result, indent=2)
+
     finally:
         conn.close()
 
