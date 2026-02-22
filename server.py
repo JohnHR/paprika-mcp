@@ -5,6 +5,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import time
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -32,8 +33,27 @@ def _get_db(read_only: bool = True) -> sqlite3.Connection:
         conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
     else:
         conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA busy_timeout = 5000")
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _kill_paprika() -> None:
+    """Kill the Paprika app so it releases its DB lock before we write."""
+    subprocess.run(
+        ["killall", "Paprika Recipe Manager 3"],
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    time.sleep(0.8)  # give it time to fully close
+
+
+def _open_paprika() -> None:
+    subprocess.run(
+        ["open", "-a", "Paprika Recipe Manager 3"],
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
 
 
 def _parse_menu_date(category_name: str) -> date | None:
@@ -281,50 +301,82 @@ def create_meal_plan(
     Returns:
         JSON with details about the created meal plan
     """
+    # Kill Paprika before opening the DB for writing so it releases its lock.
+    _kill_paprika()
+
     conn = _get_db(read_only=False)
     try:
         # Parse and format the date
         meal_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         category_name = f"{meal_date.strftime('%Y%m%d')} {label}"
 
-        # Get the next available category ID
         cursor = conn.cursor()
-        cursor.execute("SELECT MAX(Z_PK) FROM ZRECIPECATEGORY")
-        max_pk = cursor.fetchone()[0]
-        new_category_pk = (max_pk or 0) + 1
 
-        # Generate UUID for the category
-        category_uuid = str(uuid.uuid4()).upper()
+        # Idempotency: if this category already exists, reuse it instead of
+        # creating a duplicate.
+        existing = cursor.execute(
+            "SELECT Z_PK FROM ZRECIPECATEGORY WHERE ZNAME = ?",
+            (category_name,),
+        ).fetchone()
 
-        # Insert the new category with ZISSYNCED=0 to mark it as a local change
-        cursor.execute(
-            """
-            INSERT INTO ZRECIPECATEGORY
-            (Z_PK, Z_ENT, Z_OPT, ZISSYNCED, ZORDERFLAG, ZPARENT, ZNAME, ZSTATUS, ZUID)
-            VALUES (?, 13, 1, 0, 0, NULL, ?, 'unmodified', ?)
-            """,
-            (new_category_pk, category_name, category_uuid),
-        )
+        if existing:
+            new_category_pk = existing["Z_PK"]
+            created = False
+        else:
+            # Derive a safe PK: take the higher of Z_PRIMARYKEY and the actual
+            # table max so we never collide with an in-flight Paprika write.
+            pk_row = cursor.execute(
+                "SELECT Z_MAX FROM Z_PRIMARYKEY WHERE Z_NAME = 'RecipeCategory'"
+            ).fetchone()
+            pk_from_table = pk_row["Z_MAX"] if pk_row else 0
 
-        # Update Z_PRIMARYKEY table
-        cursor.execute(
-            """
-            UPDATE Z_PRIMARYKEY
-            SET Z_MAX = ?
-            WHERE Z_NAME = 'RecipeCategory'
-            """,
-            (new_category_pk,),
-        )
+            cursor.execute("SELECT MAX(Z_PK) FROM ZRECIPECATEGORY")
+            max_pk = cursor.fetchone()[0] or 0
 
-        # Link recipes to the category via the join table
-        for recipe_id in recipe_ids:
+            new_category_pk = max(pk_from_table, max_pk) + 1
+
+            # Generate UUID for the category
+            category_uuid = str(uuid.uuid4()).upper()
+
+            # ZSTATUS='new' tells Paprika this record needs to be uploaded on
+            # the next sync cycle. ZISSYNCED=0 reinforces that it hasn't been
+            # pushed to the cloud yet.
             cursor.execute(
                 """
-                INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
-                VALUES (?, ?)
+                INSERT INTO ZRECIPECATEGORY
+                (Z_PK, Z_ENT, Z_OPT, ZISSYNCED, ZORDERFLAG, ZPARENT, ZNAME, ZSTATUS, ZUID)
+                VALUES (?, 13, 1, 0, 0, NULL, ?, 'new', ?)
+                """,
+                (new_category_pk, category_name, category_uuid),
+            )
+
+            # Keep Z_PRIMARYKEY in sync
+            cursor.execute(
+                """
+                UPDATE Z_PRIMARYKEY SET Z_MAX = ?
+                WHERE Z_NAME = 'RecipeCategory'
+                """,
+                (new_category_pk,),
+            )
+            created = True
+
+        # Link recipes to the category, skipping any that are already linked.
+        for recipe_id in recipe_ids:
+            already_linked = cursor.execute(
+                """
+                SELECT 1 FROM Z_12CATEGORIES
+                WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
                 """,
                 (recipe_id, new_category_pk),
-            )
+            ).fetchone()
+            if not already_linked:
+                cursor.execute(
+                    """
+                    INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
+                    VALUES (?, ?)
+                    """,
+                    (recipe_id, new_category_pk),
+                )
 
         conn.commit()
 
@@ -343,27 +395,16 @@ def create_meal_plan(
             "date": date_str,
             "recipes_added": recipe_names,
             "recipe_count": len(recipe_names),
+            "category_created": created,
         }
-
-        # Restart Paprika to make the changes visible
-        try:
-            subprocess.run(
-                ["killall", "Paprika Recipe Manager 3"],
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            subprocess.run(
-                ["open", "-a", "Paprika Recipe Manager 3"], check=True
-            )
-            result["app_restarted"] = True
-        except Exception as e:
-            result["app_restarted"] = False
-            result["restart_error"] = str(e)
-
-        return json.dumps(result, indent=2)
 
     finally:
         conn.close()
+
+    # Reopen Paprika after the connection is closed.
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
@@ -377,6 +418,8 @@ def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
     Returns:
         JSON with confirmation of the operation
     """
+    _kill_paprika()
+
     conn = _get_db(read_only=False)
     try:
         cursor = conn.cursor()
@@ -391,7 +434,6 @@ def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
         ).fetchone()
 
         if existing:
-            # Get names for the message
             recipe = cursor.execute(
                 "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
             ).fetchone()
@@ -399,6 +441,8 @@ def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
                 "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
             ).fetchone()
 
+            conn.close()
+            _open_paprika()
             return json.dumps({
                 "success": False,
                 "message": f"Recipe '{recipe['ZNAME'].rstrip('.')}' is already in category '{category['ZNAME']}'",
@@ -428,25 +472,12 @@ def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
             "category_name": category["ZNAME"],
         }
 
-        # Restart Paprika to make the changes visible
-        try:
-            subprocess.run(
-                ["killall", "Paprika Recipe Manager 3"],
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            subprocess.run(
-                ["open", "-a", "Paprika Recipe Manager 3"], check=True
-            )
-            result["app_restarted"] = True
-        except Exception as e:
-            result["app_restarted"] = False
-            result["restart_error"] = str(e)
-
-        return json.dumps(result, indent=2)
-
     finally:
         conn.close()
+
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
@@ -460,6 +491,8 @@ def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
     Returns:
         JSON with confirmation of the operation
     """
+    _kill_paprika()
+
     conn = _get_db(read_only=False)
     try:
         cursor = conn.cursor()
@@ -488,29 +521,15 @@ def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
             "success": deleted_count > 0,
             "recipe_name": recipe["ZNAME"].rstrip(".") if recipe else None,
             "category_name": category["ZNAME"] if category else None,
-            "message": f"Removed recipe from category" if deleted_count > 0 else "Recipe was not in this category",
+            "message": "Removed recipe from category" if deleted_count > 0 else "Recipe was not in this category",
         }
-
-        # Restart Paprika to make the changes visible
-        if deleted_count > 0:
-            try:
-                subprocess.run(
-                    ["killall", "Paprika Recipe Manager 3"],
-                    stderr=subprocess.DEVNULL,
-                    check=False,
-                )
-                subprocess.run(
-                    ["open", "-a", "Paprika Recipe Manager 3"], check=True
-                )
-                result["app_restarted"] = True
-            except Exception as e:
-                result["app_restarted"] = False
-                result["restart_error"] = str(e)
-
-        return json.dumps(result, indent=2)
 
     finally:
         conn.close()
+
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
@@ -526,6 +545,8 @@ def delete_category(category_id: int) -> str:
     Returns:
         JSON with confirmation of the operation
     """
+    _kill_paprika()
+
     conn = _get_db(read_only=False)
     try:
         cursor = conn.cursor()
@@ -536,6 +557,8 @@ def delete_category(category_id: int) -> str:
         ).fetchone()
 
         if not category:
+            conn.close()
+            _open_paprika()
             return json.dumps({
                 "success": False,
                 "message": f"Category with ID {category_id} not found",
@@ -565,25 +588,12 @@ def delete_category(category_id: int) -> str:
             "message": f"Deleted category '{category_name}' and unlinked {recipes_unlinked} recipe(s)",
         }
 
-        # Restart Paprika to make the changes visible
-        try:
-            subprocess.run(
-                ["killall", "Paprika Recipe Manager 3"],
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            subprocess.run(
-                ["open", "-a", "Paprika Recipe Manager 3"], check=True
-            )
-            result["app_restarted"] = True
-        except Exception as e:
-            result["app_restarted"] = False
-            result["restart_error"] = str(e)
-
-        return json.dumps(result, indent=2)
-
     finally:
         conn.close()
+
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
 
 
 # --- Entry point ---
