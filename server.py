@@ -1,5 +1,6 @@
 """Paprika 3 MCP Server — tools for meal planning and recipe management."""
 
+import hashlib
 import json
 import os
 import re
@@ -20,7 +21,55 @@ DB_PATH = os.path.expanduser(
     "Data/Database/Paprika.sqlite"
 )
 
-mcp = FastMCP("paprika")
+mcp = FastMCP("paprika", instructions="""\
+This server manages recipes and meal plans in the Paprika 3 app.
+
+WHAT A "MEAL PLAN" IS:
+- A meal plan is a batch of 4-6 recipes that get entered as a single date-based \
+category in Paprika (e.g. "20260309 Menu"). It represents roughly a week of meals.
+- We do NOT assign recipes to specific days. The family picks from the list \
+throughout the week. Never ask "what day is this for?" or try to map recipes to days.
+
+MEAL PLANNING WORKFLOW:
+- Always call get_meal_history BEFORE suggesting meals. This is the most \
+important rule. Never recommend recipes the family just had.
+- NEVER call create_meal_plan until the user has reviewed and approved the \
+final list. Present the proposed 4-6 recipes, discuss substitutions, and only \
+write to Paprika once the user says go.
+- Batch all recipes into a single create_meal_plan call. Each write operation \
+kills and restarts the Paprika app, so multiple calls means multiple restarts.
+
+SEARCHING:
+- search_recipes is for browsing and narrowing down options. It returns names, \
+scores, categories, and last-made dates — enough to discuss options.
+- Only call get_recipe_details when the user actually wants to see ingredients \
+or directions (e.g. they're about to cook, or want to check what's in something).
+- The query parameter matches against both recipe names AND ingredient lists. \
+A search for "chicken" finds recipes named "Chicken Parmesan" AND recipes that \
+list chicken as an ingredient.
+- Use the category parameter to filter by type (e.g. "Vegetarian", "Fish", \
+"Chicken", "Dessert"). Use the query parameter for specific ingredients or dishes.
+- For "what should we make?" questions, use min_score=4 to surface family \
+favorites. For broader exploration, use the default (0).
+
+PREFERENCE SCORES:
+- Score ranges 0-7: star rating (0-5) + 1 if "Tried and True" + 1 if Favorited.
+- Higher scores = family favorites. Results are pre-sorted by score descending, \
+then by staleness (longest since last made first).
+- days_since_last_made is valuable context. Mention it naturally when presenting \
+options ("you haven't made X in 3 months").
+
+CATEGORIES & MEAL PLANS:
+- Categories are tags — a recipe can belong to many. Regular categories \
+(Chicken, Vegetarian, etc.) classify recipes. Date-based categories \
+(YYYYMMDD Label) ARE meal plans.
+- Use label "Menu" for normal meal plans. Use descriptive labels for special \
+occasions ("Birthday dinner", "Thanksgiving").
+- add_recipe_to_category / remove_recipe_from_category are for editing EXISTING \
+meal plans or managing recipe tags. Don't use them to build a new meal plan \
+one recipe at a time — use create_meal_plan instead.
+- delete_category removes a meal plan or tag entirely. Confirm with the user first.
+""")
 
 # --- Helpers ---
 
