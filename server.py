@@ -87,6 +87,11 @@ def _get_db(read_only: bool = True) -> sqlite3.Connection:
     return conn
 
 
+def _new_sync_hash() -> str:
+    """Generate a new random sync hash (how Paprika marks recipes as changed)."""
+    return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest().upper()
+
+
 def _kill_paprika() -> None:
     """Kill the Paprika app so it releases its DB lock before we write."""
     subprocess.run(
@@ -410,6 +415,7 @@ def create_meal_plan(
             created = True
 
         # Link recipes to the category, skipping any that are already linked.
+        linked_ids = []
         for recipe_id in recipe_ids:
             already_linked = cursor.execute(
                 """
@@ -426,6 +432,24 @@ def create_meal_plan(
                     """,
                     (recipe_id, new_category_pk),
                 )
+                linked_ids.append(recipe_id)
+
+        # Mark each newly-linked recipe as needing sync so the category
+        # associations propagate to other devices.  The join table has no
+        # sync fields of its own — associations travel with the recipe data.
+        # ZSYNCHASH is a random change-detection token (not a content hash).
+        # A new random hash creates a mismatch with the cloud, and combined
+        # with ZSTATUS='modified', forces Paprika to upload the local version.
+        for recipe_id in linked_ids:
+            cursor.execute(
+                """
+                UPDATE ZRECIPE
+                SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                    ZSTATUS = 'modified', ZSYNCHASH = ?
+                WHERE Z_PK = ?
+                """,
+                (_new_sync_hash(), recipe_id),
+            )
 
         conn.commit()
 
@@ -505,6 +529,17 @@ def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
             """,
             (recipe_id, category_id),
         )
+
+        # Mark recipe as needing sync so the association propagates.
+        cursor.execute(
+            """
+            UPDATE ZRECIPE
+            SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                ZSTATUS = 'modified', ZSYNCHASH = ?
+            WHERE Z_PK = ?
+            """,
+            (_new_sync_hash(), recipe_id),
+        )
         conn.commit()
 
         # Get names for confirmation
@@ -564,6 +599,19 @@ def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
         )
 
         deleted_count = cursor.rowcount
+
+        # Mark recipe as needing sync so the removal propagates.
+        if deleted_count > 0:
+            cursor.execute(
+                """
+                UPDATE ZRECIPE
+                SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                    ZSTATUS = 'modified', ZSYNCHASH = ?
+                WHERE Z_PK = ?
+                """,
+                (_new_sync_hash(), recipe_id),
+            )
+
         conn.commit()
 
         result = {
@@ -615,6 +663,13 @@ def delete_category(category_id: int) -> str:
 
         category_name = category["ZNAME"]
 
+        # Find all recipes linked to this category so we can re-sync them.
+        linked_recipes = cursor.execute(
+            "SELECT Z_12RECIPES FROM Z_12CATEGORIES WHERE Z_13CATEGORIES = ?",
+            (category_id,),
+        ).fetchall()
+        linked_ids = [r[0] for r in linked_recipes]
+
         # Delete all recipe associations
         cursor.execute(
             "DELETE FROM Z_12CATEGORIES WHERE Z_13CATEGORIES = ?",
@@ -622,9 +677,26 @@ def delete_category(category_id: int) -> str:
         )
         recipes_unlinked = cursor.rowcount
 
-        # Delete the category itself
+        # Mark affected recipes as modified so they re-sync without
+        # this category in their category list.
+        for recipe_id in linked_ids:
+            cursor.execute(
+                """
+                UPDATE ZRECIPE
+                SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                    ZSTATUS = 'modified', ZSYNCHASH = ?
+                WHERE Z_PK = ?
+                """,
+                (_new_sync_hash(), recipe_id),
+            )
+
+        # Soft-delete the category so the deletion syncs to other devices.
         cursor.execute(
-            "DELETE FROM ZRECIPECATEGORY WHERE Z_PK = ?",
+            """
+            UPDATE ZRECIPECATEGORY
+            SET ZSTATUS = 'deleted', ZISSYNCED = 0, Z_OPT = Z_OPT + 1
+            WHERE Z_PK = ?
+            """,
             (category_id,),
         )
 
