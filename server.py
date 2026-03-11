@@ -841,6 +841,91 @@ end tell
 '''
 
 
+def _add_categories_to_recipe(
+    recipe_id: int, categories: list[str]
+) -> tuple[list[str], list[str]]:
+    """Add categories to a recipe via direct DB writes (kill/restart pattern).
+
+    Returns (categories_added, categories_not_found).
+    """
+    _kill_paprika()
+
+    categories_added = []
+    categories_not_found = []
+
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        all_cats = cursor.execute(
+            "SELECT Z_PK, ZNAME FROM ZRECIPECATEGORY"
+        ).fetchall()
+        cat_lookup = {row["ZNAME"].lower(): row for row in all_cats}
+
+        for cat_name in categories:
+            match = cat_lookup.get(cat_name.lower())
+            if not match:
+                categories_not_found.append(cat_name)
+                continue
+
+            cat_pk = match["Z_PK"]
+
+            already = cursor.execute(
+                "SELECT 1 FROM Z_12CATEGORIES WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?",
+                (recipe_id, cat_pk),
+            ).fetchone()
+            if already:
+                categories_added.append(match["ZNAME"])
+                continue
+
+            cursor.execute(
+                "INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES) VALUES (?, ?)",
+                (recipe_id, cat_pk),
+            )
+            categories_added.append(match["ZNAME"])
+
+        if categories_added:
+            cursor.execute(
+                """
+                UPDATE ZRECIPE
+                SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                    ZSTATUS = 'modified', ZSYNCHASH = ?
+                WHERE Z_PK = ?
+                """,
+                (_new_sync_hash(), recipe_id),
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    _open_paprika()
+    return categories_added, categories_not_found
+
+
+def _find_recipe_by_url(url: str) -> dict | None:
+    """Check if a recipe with this URL already exists (strips query params for matching)."""
+    # Normalize: strip trailing slash and query/fragment for comparison
+    base_url = url.split("?")[0].split("#")[0].rstrip("/")
+
+    conn = _get_db()
+    try:
+        rows = conn.execute(
+            "SELECT Z_PK, ZNAME, ZSOURCEURL FROM ZRECIPE WHERE ZINTRASH = 0 AND ZSOURCEURL IS NOT NULL"
+        ).fetchall()
+        for row in rows:
+            existing_url = (row["ZSOURCEURL"] or "").split("?")[0].split("#")[0].rstrip("/")
+            if existing_url == base_url:
+                return {"Z_PK": row["Z_PK"], "ZNAME": row["ZNAME"], "ZSOURCEURL": row["ZSOURCEURL"]}
+        return None
+    finally:
+        conn.close()
+
+
+# Category ID for "AAA Up Next" — the default triage category for incoming recipes.
+_UP_NEXT_CATEGORY_ID = 8
+
+
 @mcp.tool()
 def import_recipe(
     url: str,
@@ -852,12 +937,43 @@ def import_recipe(
     Automates Paprika's UI to navigate to the URL, download the recipe using
     Paprika's built-in scraper, and save it. Optionally adds categories.
 
+    If the URL already exists in the library, skips the import and adds the
+    existing recipe to "AAA Up Next" instead.
+
     Args:
         url: The recipe URL to import.
         categories: Optional list of category names to tag the recipe with.
             Must match existing categories (case-insensitive).
         page_load_timeout: Seconds to wait for the page to load (default 8).
     """
+    # --- Check if this URL already exists ---
+    existing = _find_recipe_by_url(url)
+    if existing:
+        recipe_id = existing["Z_PK"]
+        recipe_name = (existing["ZNAME"] or "").rstrip(".")
+        cats_to_add = list(categories or [])
+        # Always add to Up Next for existing recipes
+        cats_to_add.append("AAA Up Next")
+        # Deduplicate
+        seen = set()
+        unique_cats = []
+        for c in cats_to_add:
+            if c.lower() not in seen:
+                seen.add(c.lower())
+                unique_cats.append(c)
+
+        categories_added, categories_not_found = _add_categories_to_recipe(
+            recipe_id, unique_cats
+        )
+        return json.dumps({
+            "already_existed": True,
+            "recipe_id": recipe_id,
+            "recipe_name": recipe_name,
+            "source_url": existing["ZSOURCEURL"],
+            "categories_added": categories_added,
+            "categories_not_found": categories_not_found,
+        }, indent=2)
+
     # --- Snapshot existing recipe PKs before importing ---
     conn = _get_db()
     try:
@@ -887,7 +1003,6 @@ def import_recipe(
                 )
             ).fetchall()
             if rows:
-                # Pick the highest PK (most recently inserted)
                 new_recipe = max(rows, key=lambda r: r["Z_PK"])
                 break
         finally:
@@ -909,61 +1024,12 @@ def import_recipe(
     categories_not_found = []
 
     if categories:
-        _kill_paprika()
-
-        conn = _get_db(read_only=False)
-        try:
-            cursor = conn.cursor()
-
-            # Resolve category names to PKs
-            all_cats = cursor.execute(
-                "SELECT Z_PK, ZNAME FROM ZRECIPECATEGORY"
-            ).fetchall()
-            cat_lookup = {row["ZNAME"].lower(): row for row in all_cats}
-
-            for cat_name in categories:
-                match = cat_lookup.get(cat_name.lower())
-                if not match:
-                    categories_not_found.append(cat_name)
-                    continue
-
-                cat_pk = match["Z_PK"]
-
-                # Check if already linked
-                already = cursor.execute(
-                    "SELECT 1 FROM Z_12CATEGORIES WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?",
-                    (recipe_id, cat_pk),
-                ).fetchone()
-                if already:
-                    categories_added.append(match["ZNAME"])
-                    continue
-
-                # Link recipe to category
-                cursor.execute(
-                    "INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES) VALUES (?, ?)",
-                    (recipe_id, cat_pk),
-                )
-                categories_added.append(match["ZNAME"])
-
-            # Mark recipe as needing sync
-            if categories_added:
-                cursor.execute(
-                    """
-                    UPDATE ZRECIPE
-                    SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
-                        ZSTATUS = 'modified', ZSYNCHASH = ?
-                    WHERE Z_PK = ?
-                    """,
-                    (_new_sync_hash(), recipe_id),
-                )
-
-            conn.commit()
-        finally:
-            conn.close()
-
-        _open_paprika()
+        categories_added, categories_not_found = _add_categories_to_recipe(
+            recipe_id, categories
+        )
 
     result = {
+        "already_existed": False,
         "recipe_id": recipe_id,
         "recipe_name": recipe_name,
         "source_url": source_url,
