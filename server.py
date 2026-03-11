@@ -204,11 +204,80 @@ def _recipe_to_dict(
 
 
 @mcp.tool()
+def browse_recipes(
+    sort: str = "name",
+    order: str = "asc",
+    offset: int = 0,
+    limit: int = 100,
+) -> str:
+    """Browse all recipes with pagination and sorting (no search filter).
+
+    Use this to page through the full recipe library in a controlled order.
+    For filtering by keyword or category, use search_recipes instead.
+
+    Args:
+        sort: Field to sort by. One of: "name", "id", "rating",
+            "preference_score", "last_made", "prep_time", "cook_time".
+        order: Sort direction — "asc" (ascending) or "desc" (descending).
+        offset: Number of recipes to skip (0-based). Use for pagination.
+        limit: Maximum number of recipes to return (default 100, max 500).
+    """
+    VALID_SORTS = {"name", "id", "rating", "preference_score", "last_made",
+                   "prep_time", "cook_time"}
+    if sort not in VALID_SORTS:
+        return json.dumps({"error": f"Invalid sort '{sort}'. Must be one of: {', '.join(sorted(VALID_SORTS))}"})
+    if order not in ("asc", "desc"):
+        return json.dumps({"error": "Invalid order. Must be 'asc' or 'desc'."})
+    limit = min(limit, 500)
+
+    conn = _get_db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0"
+        ).fetchall()
+
+        recipes = [_recipe_to_dict(conn, row) for row in rows]
+        total = len(recipes)
+
+        # Sort key mapping
+        def _sort_key(r):
+            if sort == "name":
+                return r["name"].lower()
+            elif sort == "id":
+                return r["id"]
+            elif sort == "rating":
+                return r["preference_score"]  # just star component isn't stored separately; use score
+            elif sort == "preference_score":
+                return r["preference_score"]
+            elif sort == "last_made":
+                return r["last_made_date"] or ""
+            elif sort == "prep_time":
+                return r["prep_time"] or ""
+            elif sort == "cook_time":
+                return r["cook_time"] or ""
+            return r["name"].lower()
+
+        recipes.sort(key=_sort_key, reverse=(order == "desc"))
+        page = recipes[offset:offset + limit]
+
+        return json.dumps({
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "count": len(page),
+            "recipes": page,
+        }, indent=2)
+    finally:
+        conn.close()
+
+
+@mcp.tool()
 def search_recipes(
     query: str | None = None,
     category: str | None = None,
     min_score: int = 0,
     max_results: int = 20,
+    sort: str = "score_then_staleness",
 ) -> str:
     """Search Paprika recipes by keyword and/or category.
 
@@ -222,6 +291,14 @@ def search_recipes(
         category: Optional category name to filter by (e.g. "Vegetarian", "Fish", "Chicken", "Dessert").
         min_score: Minimum preference score (0-7). Preference score = star rating (0-5) + 1 if Tried and True + 1 if Favorited.
         max_results: Maximum number of results to return (default 20).
+        sort: Result ordering. One of:
+            "score_then_staleness" (default) — highest preference score first,
+                then longest since last made. Best for "what should we make?".
+            "staleness" — longest since last made first (never-made recipes
+                surface at the top), with preference score as tiebreaker.
+                Use for "something we haven't made in a while" or "something new".
+            "score" — highest preference score first, ignoring staleness.
+                Use for "our absolute favorites".
     """
     conn = _get_db()
     try:
@@ -258,14 +335,28 @@ def search_recipes(
             if recipe["preference_score"] >= min_score:
                 recipes.append(recipe)
 
-        # Sort: preference_score desc, then days_since_last_made desc (prefer not-recently-made)
-        recipes.sort(
-            key=lambda r: (
-                r["preference_score"],
-                r["days_since_last_made"] or 99999,
-            ),
-            reverse=True,
-        )
+        # Sort based on requested strategy
+        if sort == "staleness":
+            recipes.sort(
+                key=lambda r: (
+                    r["days_since_last_made"] or 99999,
+                    r["preference_score"],
+                ),
+                reverse=True,
+            )
+        elif sort == "score":
+            recipes.sort(
+                key=lambda r: r["preference_score"],
+                reverse=True,
+            )
+        else:  # score_then_staleness (default)
+            recipes.sort(
+                key=lambda r: (
+                    r["preference_score"],
+                    r["days_since_last_made"] or 99999,
+                ),
+                reverse=True,
+            )
 
         recipes = recipes[:max_results]
         return json.dumps(recipes, indent=2)
