@@ -937,8 +937,10 @@ def import_recipe(
     Automates Paprika's UI to navigate to the URL, download the recipe using
     Paprika's built-in scraper, and save it. Optionally adds categories.
 
-    If the URL already exists in the library, skips the import and adds the
-    existing recipe to "AAA Up Next" instead.
+    DUPLICATE HANDLING: This tool automatically checks if the URL already
+    exists in the library before importing. If it does, it skips the import
+    and adds the existing recipe to "AAA Up Next" instead. There is no need
+    to search for the recipe first — just call this tool directly with the URL.
 
     Args:
         url: The recipe URL to import.
