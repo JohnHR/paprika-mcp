@@ -181,6 +181,7 @@ def _recipe_to_dict(
     result = {
         "id": pk,
         "name": (row["ZNAME"] or "").rstrip("."),
+        "source_url": row["ZSOURCEURL"] or None,
         "preference_score": score,
         "categories": categories,
         "cook_time": row["ZCOOKTIME"] or None,
@@ -278,13 +279,14 @@ def get_recipe_details(recipe_name: str) -> str:
 
     Args:
         recipe_name: The recipe name to look up (case-insensitive, partial match supported).
+            Also matches against the recipe's source URL, so you can pass a URL to
+            find a recipe that was imported from that site.
     """
     conn = _get_db()
     try:
-        # Try exact match first, then partial
         row = conn.execute(
-            "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND ZNAME LIKE ? LIMIT 1",
-            (f"%{recipe_name}%",),
+            "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND (ZNAME LIKE ? OR ZSOURCEURL LIKE ?) LIMIT 1",
+            (f"%{recipe_name}%", f"%{recipe_name}%"),
         ).fetchone()
 
         if not row:
