@@ -717,6 +717,222 @@ def delete_category(category_id: int) -> str:
     return json.dumps(result, indent=2)
 
 
+# --- AppleScript helpers ---
+
+
+def _run_applescript(script: str) -> str:
+    """Run an AppleScript via osascript and return stdout."""
+    result = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"AppleScript failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def _import_recipe_applescript(url: str, page_load_timeout: int = 8) -> str:
+    """Build the AppleScript that drives Paprika's browser to import a recipe.
+
+    Flow:
+      1. Activate Paprika and click "Browser" in the sidebar
+      2. Reset any stale scraper data
+      3. Cmd+L to focus the address bar, set the URL, press Enter
+      4. Wait for the page to load
+      5. Click "Download" in the browser toolbar to scrape the recipe
+      6. Wait for the recipe edit form to appear
+      7. Click "Save" on the edit form to persist the recipe
+    """
+    return f'''
+tell application "Paprika Recipe Manager 3" to activate
+delay 0.5
+
+tell application "System Events"
+    tell process "Paprika Recipe Manager 3"
+        set frontmost to true
+        delay 0.3
+
+        -- Step 1: Click "Browser" in the sidebar
+        select row 3 of outline 1 of scroll area 1 of splitter group 1 of window 1
+        delay 1
+
+        -- Step 2: Reset any stale scraper data from a previous page
+        try
+            click button "Reset" of splitter group 1 of splitter group 1 of window 1
+            delay 0.5
+        end try
+
+        -- Step 3: Focus address bar with Cmd+L, set URL, navigate
+        keystroke "l" using command down
+        delay 0.5
+        set fe to value of attribute "AXFocusedUIElement"
+        set value of fe to "{url}"
+        delay 0.2
+        key code 36
+        delay {page_load_timeout}
+
+        -- Step 4: Click "Download" in the browser toolbar to scrape the recipe
+        -- This button is inside splitter group 1 of splitter group 1 (the browser view)
+        click button "Download" of splitter group 1 of splitter group 1 of window 1
+        delay 5
+
+        -- Step 5: Wait for the recipe edit form to appear
+        -- The edit form has a "Save" button at splitter group 1 of window 1 (one level up)
+        set maxWait to 15
+        set waited to 0
+        repeat while waited < maxWait
+            try
+                set btnDesc to description of button "Save" of splitter group 1 of window 1
+                if btnDesc is "Save Recipe" then exit repeat
+            end try
+            delay 1
+            set waited to waited + 1
+        end repeat
+
+        -- Step 6: Click "Save" on the edit form to persist the recipe
+        click button "Save" of splitter group 1 of window 1
+        delay 1
+
+        return "ok"
+    end tell
+end tell
+'''
+
+
+@mcp.tool()
+def import_recipe(
+    url: str,
+    categories: list[str] | None = None,
+    page_load_timeout: int = 8,
+) -> str:
+    """Import a recipe from a URL using Paprika's built-in browser and scraper.
+
+    Automates Paprika's UI to navigate to the URL, download the recipe using
+    Paprika's built-in scraper, and save it. Optionally adds categories.
+
+    Args:
+        url: The recipe URL to import.
+        categories: Optional list of category names to tag the recipe with.
+            Must match existing categories (case-insensitive).
+        page_load_timeout: Seconds to wait for the page to load (default 8).
+    """
+    # --- Snapshot existing recipe PKs before importing ---
+    conn = _get_db()
+    try:
+        existing_pks = {
+            row[0]
+            for row in conn.execute("SELECT Z_PK FROM ZRECIPE").fetchall()
+        }
+    finally:
+        conn.close()
+
+    # --- Run the UI automation ---
+    script = _import_recipe_applescript(url, page_load_timeout)
+    try:
+        _run_applescript(script)
+    except RuntimeError as e:
+        return json.dumps({"error": f"UI automation failed: {e}"})
+
+    # --- Detect the newly imported recipe ---
+    new_recipe = None
+    for attempt in range(10):
+        time.sleep(1)
+        conn = _get_db()
+        try:
+            rows = conn.execute(
+                "SELECT Z_PK, ZNAME, ZSOURCEURL FROM ZRECIPE WHERE Z_PK NOT IN ({})".format(
+                    ",".join(str(pk) for pk in existing_pks) if existing_pks else "0"
+                )
+            ).fetchall()
+            if rows:
+                # Pick the highest PK (most recently inserted)
+                new_recipe = max(rows, key=lambda r: r["Z_PK"])
+                break
+        finally:
+            conn.close()
+
+    if not new_recipe:
+        return json.dumps({
+            "error": "No new recipe detected after import. "
+            "The URL may not be supported by Paprika's scraper, "
+            "or the page may not have loaded in time."
+        })
+
+    recipe_id = new_recipe["Z_PK"]
+    recipe_name = (new_recipe["ZNAME"] or "").rstrip(".")
+    source_url = new_recipe["ZSOURCEURL"] or url
+
+    # --- Add categories if requested ---
+    categories_added = []
+    categories_not_found = []
+
+    if categories:
+        _kill_paprika()
+
+        conn = _get_db(read_only=False)
+        try:
+            cursor = conn.cursor()
+
+            # Resolve category names to PKs
+            all_cats = cursor.execute(
+                "SELECT Z_PK, ZNAME FROM ZRECIPECATEGORY"
+            ).fetchall()
+            cat_lookup = {row["ZNAME"].lower(): row for row in all_cats}
+
+            for cat_name in categories:
+                match = cat_lookup.get(cat_name.lower())
+                if not match:
+                    categories_not_found.append(cat_name)
+                    continue
+
+                cat_pk = match["Z_PK"]
+
+                # Check if already linked
+                already = cursor.execute(
+                    "SELECT 1 FROM Z_12CATEGORIES WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?",
+                    (recipe_id, cat_pk),
+                ).fetchone()
+                if already:
+                    categories_added.append(match["ZNAME"])
+                    continue
+
+                # Link recipe to category
+                cursor.execute(
+                    "INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES) VALUES (?, ?)",
+                    (recipe_id, cat_pk),
+                )
+                categories_added.append(match["ZNAME"])
+
+            # Mark recipe as needing sync
+            if categories_added:
+                cursor.execute(
+                    """
+                    UPDATE ZRECIPE
+                    SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                        ZSTATUS = 'modified', ZSYNCHASH = ?
+                    WHERE Z_PK = ?
+                    """,
+                    (_new_sync_hash(), recipe_id),
+                )
+
+            conn.commit()
+        finally:
+            conn.close()
+
+        _open_paprika()
+
+    result = {
+        "recipe_id": recipe_id,
+        "recipe_name": recipe_name,
+        "source_url": source_url,
+        "categories_added": categories_added,
+        "categories_not_found": categories_not_found,
+    }
+    return json.dumps(result, indent=2)
+
+
 # --- Entry point ---
 
 def main():
