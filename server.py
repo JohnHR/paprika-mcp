@@ -630,6 +630,37 @@ def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
 
 
 @mcp.tool()
+def list_categories(query: str | None = None) -> str:
+    """List all recipe categories with their IDs.
+
+    Returns regular categories (not date-based meal plans). Use the ID
+    to add/remove recipes from a category.
+
+    Args:
+        query: Optional substring to filter category names (case-insensitive).
+    """
+    conn = _get_db()
+    try:
+        rows = conn.execute(
+            "SELECT Z_PK, ZNAME FROM ZRECIPECATEGORY WHERE ZSTATUS != 'deleted' OR ZSTATUS IS NULL"
+        ).fetchall()
+
+        categories = []
+        for row in rows:
+            name = row["ZNAME"]
+            if _parse_menu_date(name):
+                continue  # skip date-based meal plan categories
+            if query and query.lower() not in name.lower():
+                continue
+            categories.append({"id": row["Z_PK"], "name": name})
+
+        categories.sort(key=lambda c: c["name"].lower())
+        return json.dumps(categories, indent=2)
+    finally:
+        conn.close()
+
+
+@mcp.tool()
 def delete_category(category_id: int) -> str:
     """Delete a category and remove all recipe associations with it.
 
