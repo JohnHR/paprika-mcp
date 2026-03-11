@@ -213,6 +213,11 @@ def search_recipes(
 
     Args:
         query: Optional keyword to search in recipe names and ingredients (case-insensitive substring match).
+            Multi-word queries match each word independently in any order — e.g.
+            "chicken parmesan" finds recipes with both words anywhere in the name
+            or ingredient list. Use fewer, more specific words for better results.
+            A single distinctive word often works best (e.g. "shawarma" not
+            "chicken shawarma").
         category: Optional category name to filter by (e.g. "Vegetarian", "Fish", "Chicken", "Dessert").
         min_score: Minimum preference score (0-7). Preference score = star rating (0-5) + 1 if Tried and True + 1 if Favorited.
         max_results: Maximum number of results to return (default 20).
@@ -224,9 +229,13 @@ def search_recipes(
         params: list = []
 
         if query:
-            sql += " AND (r.ZNAME LIKE ? OR r.ZINGREDIENTS LIKE ?)"
-            like = f"%{query}%"
-            params.extend([like, like])
+            # Split into words so "chicken parmesan" matches regardless of
+            # word order — each word must appear in either name or ingredients.
+            words = query.split()
+            for word in words:
+                sql += " AND (r.ZNAME LIKE ? OR r.ZINGREDIENTS LIKE ?)"
+                like = f"%{word}%"
+                params.extend([like, like])
 
         if category:
             sql += """
