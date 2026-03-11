@@ -5,12 +5,15 @@ An MCP server that lets Claude query and manage your Paprika 3 recipe database f
 ## Tools
 
 ### Read Tools
-- **search_recipes** — Search by keyword, category, and minimum preference score
+- **browse_recipes** — Page through the full library with configurable sort (name, id, rating, preference_score, last_made, prep_time, cook_time) and pagination (offset/limit)
+- **search_recipes** — Search by keyword, category, and minimum preference score. Supports three sort strategies: `score_then_staleness` (default), `staleness` (never-made/oldest first), and `score` (pure favorites)
 - **get_recipe_details** — Get full recipe with ingredients and directions
 - **get_meal_history** — See what you've cooked recently (based on dated menu categories)
+- **list_categories** — List all recipe categories with their IDs
 
 ### Write Tools
 - **create_meal_plan** — Create a new date-based meal plan by tagging recipes with a category (automatically restarts Paprika)
+- **import_recipe** — Import a recipe from a URL using Paprika's built-in browser/scraper (auto-deduplicates)
 - **add_recipe_to_category** — Add a recipe to an existing category
 - **remove_recipe_from_category** — Remove a recipe from a category
 - **delete_category** — Delete a category and all its recipe associations
@@ -50,19 +53,26 @@ The Paprika tools will now be available in any conversation.
 
 ## Example prompts
 
-- "Plan 5 dinners for next week — one vegetarian, one fish, and use up the chicken thighs I defrosted."
+- "Plan 5 dinners — one vegetarian, one fish, and use up the chicken thighs I defrosted."
+- "Keep the salmon and butter chicken, but find different veggie and pasta options."
+- "I like those but throw in something we've never made before."
 - "What are our highest-rated recipes we haven't made in a while?"
 - "Show me what we've been eating the last few weeks."
-- "Create a meal plan for Friday with Chicken Tikka Masala and Garlic Naan"
-- "Actually, swap out that recipe for Butter Chicken instead"
-- "Add Garlic Naan to tomorrow's dinner plan"
-- "Never mind, delete that whole meal plan"
+- "Import this recipe: https://example.com/amazing-soup"
 
 ## How it works
 
-The server directly accesses the Paprika 3 SQLite database to read recipes and create meal plans. When creating meal plans, it:
+The server directly accesses the Paprika 3 SQLite database to read recipes and manage meal plans. For imports, it drives Paprika's built-in browser via AppleScript to scrape and save recipes from URLs.
+
+When creating meal plans, it:
 1. Creates a new category with format `YYYYMMDD Label` (e.g., "20260215 Menu")
 2. Tags the selected recipes with this category
 3. Automatically restarts Paprika so the changes are visible immediately
 
 Categories in Paprika work like tags, so recipes can belong to multiple categories/meal plans.
+
+"Last made" dates are inferred from meal plan categories — if a recipe is tagged with "20260309 Menu", it was last made around March 9, 2026.
+
+### Syncing across devices
+
+Write operations (creating meal plans, tagging recipes, importing, deleting categories) mark affected records as dirty (`ZISSYNCED = 0`, `ZSTATUS = 'modified'`/`'new'`/`'deleted'`) with a fresh `ZSYNCHASH`. This tells Paprika's built-in sync engine to push the changes to the cloud on its next sync cycle, so they propagate to other devices automatically.
