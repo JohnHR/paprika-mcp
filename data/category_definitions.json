@@ -1,0 +1,136 @@
+{
+  "_description": "Category definitions for the LLM categorization pipeline. Each recipe should be evaluated against all assignable categories. A recipe can belong to multiple categories.",
+
+  "assignable_categories": {
+    "Chicken": {
+      "definition": "Recipe features chicken as a primary protein (chicken thighs, breasts, rotisserie chicken, etc.).",
+      "signals": ["chicken in ingredients"]
+    },
+    "Beef / Pork": {
+      "definition": "Recipe features beef, pork, lamb, or other red meat as a primary protein.",
+      "signals": ["beef, pork, lamb, sausage, bacon (as main protein, not garnish) in ingredients"]
+    },
+    "Fish": {
+      "definition": "Recipe features fish or seafood as a primary protein.",
+      "signals": ["fish, shrimp, salmon, tuna, scallops, etc. in ingredients"]
+    },
+    "Vegetarian": {
+      "definition": "A vegetarian entree suitable for lunch or dinner — no meat or fish. Eggs and dairy are fine. Should be substantial enough to be a main course, not a side dish. If the recipe is vegetarian as-written, tag it even if it could be served alongside meat.",
+      "signals": ["no meat/fish in ingredients list", "substantial main course", "suitable as lunch or dinner entree"]
+    },
+    "Breakfast": {
+      "definition": "Primarily a breakfast or brunch dish.",
+      "signals": ["eggs, pancakes, waffles, oats, crepes, French toast, granola, breakfast burritos"]
+    },
+    "Dinner": {
+      "definition": "Suitable as a main course for dinner. Most savory entrees qualify. Sides, snacks, drinks, and desserts do NOT qualify unless they're substantial enough to be a meal.",
+      "signals": ["main course, entree, substantial savory dish"]
+    },
+    "Dessert": {
+      "definition": "Sweet course served after a meal, or a sweet treat.",
+      "signals": ["cake, pie, cookies, ice cream, pudding, mousse, tart, pastry, candy"]
+    },
+    "Drinks": {
+      "definition": "Beverages — cocktails, mocktails, coffee drinks, smoothies, etc.",
+      "signals": ["recipe produces a drink"]
+    },
+    "Snacks": {
+      "definition": "Small bites, appetizers, or finger food eaten outside of a meal (not a side dish). Not a full meal. Examples: dips, popcorn, nuts, trail mix, handheld treats. Not vegetable sides or bread sides served alongside dinner.",
+      "signals": ["dip, crackers, popcorn, nuts, small bites, appetizer, eaten between meals or as standalone"]
+    },
+    "Baking": {
+      "definition": "Recipes for things you'd find in a bakery — breads, pastries, cakes, cookies, doughs. Focused on sweet and savory baked goods (not just anything baked in an oven). Does NOT include casseroles, baked meats (like baked fish), roasted vegetables, or other savory dishes that happen to use the oven. If it's sweet or it's bread/pastry, it likely belongs here.",
+      "signals": ["flour, yeast, baking powder/soda, dough, batter, pastry, bread, cake, cookie, croissant, scone, muffin, donut"]
+    },
+    "Cookies": {
+      "definition": "Specifically cookies — a subset of baking/dessert.",
+      "signals": ["cookie dough, cookie sheet, shortbread, biscotti"]
+    },
+    "Pasta": {
+      "definition": "Recipe where pasta or noodles are a primary component.",
+      "signals": ["spaghetti, penne, orzo, ramen, udon, rice noodles, gnocchi, etc."]
+    },
+    "Salad": {
+      "definition": "A salad — could be green salad, grain salad, pasta salad (if salad-style), fruit salad. A salad can be either a side dish (like a simple green salad) or a substantial entree (like a salad with hearty protein, grains, or substantial vegetables). The Salad category is independent of whether it's an entree-category salad. If a salad is substantial enough to be a main course (e.g., with hard-boiled eggs, grilled protein, hearty grains, or substantial vegetables), it may ALSO qualify for entree-only categories like Vegetarian or Weekday, depending on other factors.",
+      "signals": ["salad in name, mixed greens, vinaigrette, served cold/room temp as a composed salad", "ENTREE salads: substantial protein present (eggs, cheese, legumes, grilled meat/fish), hearty grains (farro, quinoa, barley), or vegetable-based but filling"]
+    },
+    "Sandwich": {
+      "definition": "Sandwiches, wraps, tacos, burritos, open-faced toasts — anything where bread/tortilla is the vessel.",
+      "signals": ["bread, bun, tortilla, wrap as the serving vessel"]
+    },
+    "Soup": {
+      "definition": "Soups, stews, chilis, broths.",
+      "signals": ["broth-based, pureed, stew, chili"]
+    },
+    "Casserole": {
+      "definition": "One-dish baked meals, gratins, bakes. The kind of thing you assemble in a baking dish and put in the oven.",
+      "signals": ["bake, gratin, casserole dish, layered and baked"]
+    },
+    "Sides": {
+      "definition": "Side dishes — vegetables, starches, breads that accompany a main course rather than being one.",
+      "signals": ["serves as accompaniment, vegetable side, rice/grain side, bread side"]
+    },
+    "Grilling": {
+      "definition": "Recipe cooked on a grill (charcoal, gas, or grill pan).",
+      "signals": ["grill, grilled, charcoal, BBQ, grill marks"]
+    },
+    "Instant Pot": {
+      "definition": "Recipe specifically uses an Instant Pot or pressure cooker.",
+      "signals": ["Instant Pot, pressure cooker in directions"]
+    },
+    "Slow Cooker": {
+      "definition": "Recipe specifically uses a slow cooker or crockpot.",
+      "signals": ["slow cooker, crockpot in directions, 6-8 hour low cook time"]
+    },
+    "Weekday": {
+      "definition": "A quick, simple entree suitable for a busy weeknight lunch or dinner. Fast to prepare, not too many steps or techniques, family-friendly. Generally under 45 minutes active time and not overly complex. The inverse of Sunday Dish. Must be substantial enough to be a main course.",
+      "signals": ["short cook/prep time, few ingredients, simple techniques, one-pot/one-pan, 30-minute meals", "suitable as lunch or dinner entree"]
+    },
+    "Sunday Dish": {
+      "definition": "A more complex or ambitious 'project' recipe that needs a free Sunday afternoon. Could be time-intensive (long braises, multi-step processes), technique-heavy (homemade pasta, laminated dough), or just extra special. Not something you'd attempt on a Tuesday after work.",
+      "signals": ["long total time (2+ hours), multiple components, advanced techniques, special occasion feel, recipe the cook is excited to spend time on"]
+    },
+    "Entertaining": {
+      "definition": "Good for hosting guests. This means one or more of: (1) visually impressive or 'showy', (2) scales well for a crowd, (3) has significant passive cooking time (e.g., last hour in the oven) so the cook is free to socialize. A recipe doesn't need all three — any one qualifies.",
+      "signals": ["serves 6+, impressive presentation, can be prepped ahead, oven-finishes while host is free, crowd-pleaser"]
+    },
+    "Cheap / Pantry Staples": {
+      "definition": "A main course (lunch or dinner entree) built almost entirely from ingredients a well-stocked home kitchen already has on hand — the kind of meal where you might not need a grocery trip at all. The test is: could you make this from memory by raiding your pantry and fridge on a weeknight?\n\nELIGIBLE PANTRY STAPLES: pasta, rice, beans/lentils (canned or dry), canned tomatoes, eggs, potatoes, onions, garlic, bell peppers, fresh tomatoes, lemons, limes, carrots, celery; butter, milk, cream, common cheeses (parmesan, mozzarella, cheddar, feta, ricotta); olive/vegetable oil, soy sauce, vinegar (all kinds), honey, mustard, hot sauce, Worcestershire; standard dried spices (salt, black pepper, cumin, paprika, chili powder/flakes, oregano, thyme, rosemary, cinnamon, cayenne, garlic powder, onion powder, bay leaves); one or two very common fresh herbs (parsley, cilantro, basil, chives).\n\nELIGIBLE CHEAP PROTEINS: eggs, canned beans/lentils, ground meat (beef/turkey/pork), chicken thighs/drumsticks, rotisserie chicken, canned tuna/sardines.\n\nHARD EXCLUDES:\n(1) NOT a main course — side dishes, snacks, dips, sauces/condiments, and desserts never qualify, even if cheap.\n(2) Expensive proteins — salmon fillets, shrimp, scallops, whole turkey, holiday ham, duck, lamb chops, short ribs, or specialty seafood.\n(3) Specialty spices or ingredients you'd need to specifically shop for — the rule: if you'd add it to a grocery list rather than just restocking a depleted staple, it fails. Examples that fail: curry leaves, black mustard seeds, tarragon, lemongrass, kaffir lime leaves, sumac, za'atar, asafoetida, fenugreek, dried chiles beyond standard chili powder (ancho, guajillo, etc.).\n(4) Multiple unusual fresh herbs — one common herb is fine; a recipe requiring two or more specialty fresh herbs (anything beyond parsley/cilantro/basil/chives) likely requires a special shopping trip.\n(5) Specialty produce — specialty mushrooms (shiitake, oyster, porcini) as a primary ingredient; specialty hot peppers beyond jalapeño/serrano.",
+      "signals": ["nearly all ingredients are shelf-stable pantry items, everyday produce (onions, garlic, bell peppers, tomatoes, lemons, potatoes), or standard refrigerator staples", "proteins (if any) are eggs, beans/lentils, canned fish, ground meat, or chicken thighs/drumsticks", "NOT a side dish, snack, dip, sauce, or dessert — must be a standalone main course", "no expensive proteins (salmon, shrimp, scallops, specialty holiday proteins)", "no specialty spices that require a special trip (curry leaves, black mustard seeds, tarragon, sumac, za'atar, etc.)", "no requirement for 2+ unusual fresh herbs or specialty produce"]
+    },
+    "1 - Spring": {
+      "definition": "Recipes that feel like spring — fresh, light, featuring spring produce.",
+      "signals": ["asparagus, peas, artichokes, strawberries, rhubarb, fresh herbs, light and bright flavors"]
+    },
+    "2- Summer": {
+      "definition": "Recipes that feel like summer — grilling, fresh produce, served cold or light.",
+      "signals": ["tomatoes, corn, peaches, berries, watermelon, grilled foods, cold soups, salads, no-cook or minimal-cook"]
+    },
+    "3 - Autumn": {
+      "definition": "Recipes that feel like fall — warming, hearty, featuring fall produce.",
+      "signals": ["squash, pumpkin, apples, pears, warm spices (cinnamon, nutmeg), braises, stews, root vegetables"]
+    },
+    "4 - Winter": {
+      "definition": "Recipes that feel like winter — heavy, warming comfort food.",
+      "signals": ["braises, stews, hearty soups, root vegetables, citrus, warming spices, comfort food"]
+    }
+  },
+
+  "skip_categories": {
+    "Tried and True": "Manually assigned based on family experience — only the user knows if a recipe has become a staple.",
+    "Favorites": "Mirrors the Paprika favorited flag — user assigns manually.",
+    "Try Soon": "Triage/queue category — user assigns manually when they want to try something.",
+    "Tips & Tricks": "Not a recipe category — reference material.",
+    "Bakeathon": "Special event tag — user assigns manually.",
+    "Sarah Kuryz": "Person-based tag — user assigns manually."
+  },
+
+  "notes": [
+    "A recipe can and should belong to multiple categories (e.g., Chicken + Dinner + Weekday + Cheap/Pantry Staples).",
+    "Seasonal categories are not exclusive — a recipe can be both Summer and Entertaining.",
+    "When in doubt about Weekday vs Sunday Dish, lean toward the recipe's complexity and active time, not total time (a slow cooker recipe with 10 min prep is Weekday even if it cooks for 8 hours).",
+    "Cookies are always also Dessert and usually also Baking.",
+    "If a recipe could be either a Side or a Dinner depending on portion, tag both if reasonable.",
+    "Date-based categories (YYYYMMDD format or starting with 'zz') are meal plans — never assign these."
+  ]
+}

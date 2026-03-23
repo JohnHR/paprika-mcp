@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 .venv/
 .env
+.DS_Store
+
+# Data snapshots — ignore generated files, track only intentional ones
+data/*.json
+data/*.txt
+!data/category_definitions.json
+!data/category_staging_final_v3.json
+!data/recipes_dump_sorted.json

@@ -1,0 +1,1409 @@
+{
+  "generated_at": "2026-03-21 19:50:50",
+  "total_recipes": 937,
+  "pass": "Phase 1 v3 - Fresh dump after Phase 2 application",
+  "summary": {
+    "recipes_with_changes": 90,
+    "total_additions": 37,
+    "total_removals": 97
+  },
+  "changes": [
+    {
+      "id": 17,
+      "name": "Kale and Cabbage Salad",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides",
+        "Tried and True"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 45,
+      "name": "Salmon and Couscous Salad with Cucumber-Feta Dressing",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Fish",
+        "Salad"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 57,
+      "name": "Tuna Salad (Julia Child)",
+      "current_categories": [
+        "Fish",
+        "Salad",
+        "Sandwich",
+        "Vegetarian"
+      ],
+      "add": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 130,
+      "name": "Lemon-Tahini Slaw",
+      "current_categories": [
+        "Salad",
+        "Sides",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 133,
+      "name": "Best Fudgy Cocoa Brownies",
+      "current_categories": [
+        "Baking",
+        "Dessert",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 175,
+      "name": "Mediterranean Quinoa Salad",
+      "current_categories": [
+        "2- Summer",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Entertaining",
+        "Salad",
+        "Sides"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 191,
+      "name": "Roasted Butternut Squash Bread Salad",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 239,
+      "name": "Classic French Toast",
+      "current_categories": [
+        "Breakfast",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Breakfast (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 286,
+      "name": "5-Minute Hummus",
+      "current_categories": [
+        "Sides",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 296,
+      "name": "Asparagus Salad with Hard-Boiled Eggs",
+      "current_categories": [
+        "1 - Spring",
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 313,
+      "name": "Roast Cauliflower, Fennel and White Bean Salad with Roast Tomato Salsa",
+      "current_categories": [
+        "Dinner",
+        "Entertaining",
+        "Salad",
+        "Sides",
+        "Sunday Dish"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 328,
+      "name": "Easy Veggie Muffins (with Broccoli and Carrots!)",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 333,
+      "name": "Nonnie\u2019s 5 Ingredient Peach Dump.",
+      "current_categories": [
+        "1 - Spring",
+        "Cheap / Pantry Staples",
+        "Dessert",
+        "Dinner",
+        "Pasta"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Dessert (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 339,
+      "name": "Fried Shallots",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 340,
+      "name": "Olive Oil Yogurt Cake Recipe!",
+      "current_categories": [
+        "Baking",
+        "Breakfast",
+        "Dessert",
+        "Dinner",
+        "Pasta",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 374,
+      "name": "Black Bean and Corn Salad",
+      "current_categories": [
+        "2- Summer",
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 381,
+      "name": "Warm Roasted Carrot and Barley Salad",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Salad",
+        "Sides",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 402,
+      "name": "Horseradish Sauce",
+      "current_categories": [
+        "Sides",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 414,
+      "name": "Peanut Dipping Sauce",
+      "current_categories": [
+        "Beef / Pork",
+        "Entertaining",
+        "Sides",
+        "Snacks",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 418,
+      "name": "Quick Refrigerator Pickles",
+      "current_categories": [
+        "Dinner",
+        "Fish",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 419,
+      "name": "Healthy Homemade Granola Bars",
+      "current_categories": [
+        "Baking",
+        "Breakfast",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 428,
+      "name": "The Apple Pancake",
+      "current_categories": [
+        "Baking",
+        "Breakfast",
+        "Cheap / Pantry Staples",
+        "Entertaining",
+        "Sunday Dish",
+        "Tried and True"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 431,
+      "name": "Middle Eastern Fresh Fava Bean Salad",
+      "current_categories": [
+        "Chicken",
+        "Dinner",
+        "Salad"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 434,
+      "name": "Sheet-Pan Chocolate Chip Pancakes",
+      "current_categories": [
+        "Baking",
+        "Breakfast",
+        "Entertaining",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 436,
+      "name": "Cheesy Cauliflower Nachos",
+      "current_categories": [
+        "Dinner",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 454,
+      "name": "Kohlrabi and Carrot Slaw",
+      "current_categories": [
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 468,
+      "name": "Pasta with Sausage, Squash and Sage Brown Butter",
+      "current_categories": [
+        "3 - Autumn",
+        "Pasta",
+        "Salad",
+        "Sides",
+        "Try Soon"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 502,
+      "name": "White Bean and Asparagus Salad with Tarragon-Lemon Dressing",
+      "current_categories": [
+        "Dinner",
+        "Salad",
+        "Sides",
+        "Try Soon"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 516,
+      "name": "Chicken Salad with Lemon-Sesame Dressing",
+      "current_categories": [
+        "Chicken",
+        "Dinner",
+        "Salad",
+        "Try Soon"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 519,
+      "name": "Strawberry Pavlova",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Dessert",
+        "Entertaining",
+        "Sunday Dish",
+        "Try Soon"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 523,
+      "name": "Rotisserie Chicken Panzanella Recipe - NYT Cooking",
+      "current_categories": [
+        "Chicken",
+        "Dinner",
+        "Salad",
+        "Tried and True"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 525,
+      "name": "Spoonbread",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Entertaining",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 527,
+      "name": "The Easiest Lemon Curd",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dessert"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Dessert (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 533,
+      "name": "Easy Vegan Peanut Butter-Maple Ice Cream",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dessert",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Dessert (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 535,
+      "name": "Peanut Butter-Glazed Salmon and Green Beans",
+      "current_categories": [
+        "4 - Winter",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Entertaining",
+        "Fish",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 538,
+      "name": "Baked Beans",
+      "current_categories": [
+        "2- Summer",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Entertaining",
+        "Sides",
+        "Sunday Dish"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 539,
+      "name": "Pumpkin Breakfast Cookies",
+      "current_categories": [
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 544,
+      "name": "Marcella Hazan\u2019s Bolognese Sauce",
+      "current_categories": [
+        "Beef / Pork",
+        "Breakfast",
+        "Dinner",
+        "Pasta",
+        "Sunday Dish",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Breakfast (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 552,
+      "name": "Vegetable Noodle Salad with Sesame Vinaigrette",
+      "current_categories": [
+        "Dinner",
+        "Pasta",
+        "Salad",
+        "Tried and True"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 553,
+      "name": "Orzo Salad with Peppers and Feta",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Favorites",
+        "Pasta",
+        "Snacks",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 572,
+      "name": "Puttanesca Chickpea-Tomato Salad",
+      "current_categories": [
+        "3 - Autumn",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 576,
+      "name": "Cold Noodle Salad with Spicy Peanut Sauce",
+      "current_categories": [
+        "2- Summer",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Pasta",
+        "Salad",
+        "Try Soon",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 590,
+      "name": "Chocolate Self-Saucing Cake",
+      "current_categories": [
+        "3 - Autumn",
+        "4 - Winter",
+        "Baking",
+        "Dessert",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 600,
+      "name": "Olive Oil Cake (6k reviews)",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Dessert",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 607,
+      "name": "Grilled Feta with Nuts",
+      "current_categories": [
+        "2- Summer",
+        "Entertaining",
+        "Grilling",
+        "Sides",
+        "Snacks",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 608,
+      "name": "Greek Chicken with Cucumber-Feta Salad",
+      "current_categories": [
+        "2- Summer",
+        "Chicken",
+        "Dinner",
+        "Salad",
+        "Tried and True"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 615,
+      "name": "Arugula Salad with Parmesan",
+      "current_categories": [
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 621,
+      "name": "Rosemary White Beans with Frizzled Onions and Tomato",
+      "current_categories": [
+        "4 - Winter",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Sides",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 625,
+      "name": "Brownie Cookies",
+      "current_categories": [
+        "Baking",
+        "Cookies",
+        "Dessert",
+        "Try Soon",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 648,
+      "name": "Basic Pesto",
+      "current_categories": [
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 660,
+      "name": "Sheet-Pan Roasted Salmon Ni\u00e7oise Salad",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Fish",
+        "Salad",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 666,
+      "name": "Zucchini with Shallots",
+      "current_categories": [
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 668,
+      "name": "Zucchini Panzanella",
+      "current_categories": [
+        "Dinner",
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 672,
+      "name": "Strawberry Spoon Cake",
+      "current_categories": [
+        "Baking",
+        "Dessert",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 681,
+      "name": "Shakshuka with Feta",
+      "current_categories": [
+        "Breakfast",
+        "Cheap / Pantry Staples",
+        "Dinner"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Breakfast (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 682,
+      "name": "Best Chicken Salad",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Chicken",
+        "Salad",
+        "Sandwich",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 685,
+      "name": "Eggs in Purgatory",
+      "current_categories": [
+        "Breakfast",
+        "Cheap / Pantry Staples",
+        "Dinner"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Breakfast (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 686,
+      "name": "Tomato Cheddar Toasts",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Favorites",
+        "Sandwich",
+        "Snacks",
+        "Tried and True"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 695,
+      "name": "Roasted Cauliflower with Crispy Parmesan",
+      "current_categories": [
+        "Sides",
+        "Tips & Tricks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 706,
+      "name": "Drop Biscuits",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 728,
+      "name": "Roasted Potatoes",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 737,
+      "name": "Make-Ahead Gravy",
+      "current_categories": [
+        "Casserole",
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Entertaining",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 739,
+      "name": "Vegan Mushroom Make-Ahead Gravy",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 759,
+      "name": "Cream Cheese Mints",
+      "current_categories": [
+        "Dessert",
+        "Snacks",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Dessert (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 764,
+      "name": "Cranberry Sauce",
+      "current_categories": [
+        "3 - Autumn",
+        "Cheap / Pantry Staples",
+        "Entertaining",
+        "Sides",
+        "Tried and True"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 791,
+      "name": "Yum Yum Sauce",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 798,
+      "name": "Chocolate Lava Cake for Two",
+      "current_categories": [
+        "Baking",
+        "Dessert",
+        "Entertaining",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 834,
+      "name": "Garlicky Alfredo Beans",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 836,
+      "name": "Tomato-Green Bean Salad with Chickpeas, Feta and Dill",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides"
+      ],
+      "add": [
+        "Weekday",
+        "Vegetarian"
+      ],
+      "remove": [],
+      "reasoning": "Substantial salad - can be entree - restored entree-only tags."
+    },
+    {
+      "id": 840,
+      "name": "Torn Croutons",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 844,
+      "name": "Magnolia Bakery\u2019s Cupcakes",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Dessert",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 859,
+      "name": "No Bake Energy Bites",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Snacks"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 867,
+      "name": "Loaded Baked Frittata",
+      "current_categories": [
+        "Breakfast",
+        "Dinner",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Breakfast (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 868,
+      "name": "Roasted Honey Nut Squash and Chickpeas with Hot Honey",
+      "current_categories": [
+        "Dinner",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 884,
+      "name": "Salt and Vinegar Roasted Potatoes",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 910,
+      "name": "The Best Brussels Sprouts Recipe",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 917,
+      "name": "Classic Marinara Sauce",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 922,
+      "name": "Classic Potato Latkes",
+      "current_categories": [
+        "4 - Winter",
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 923,
+      "name": "Chicken Wings with Gochujang, Ginger and Garlic",
+      "current_categories": [
+        "Chicken",
+        "Dinner",
+        "Snacks",
+        "Tried and True",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 933,
+      "name": "Spicy Tuna Salad with Crispy Rice",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Dinner",
+        "Fish",
+        "Salad",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 942,
+      "name": "Potato Wedges",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 946,
+      "name": "Roasted Broccoli with Vinegar-Mustard Glaze",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 950,
+      "name": "Cabbage Steaks",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides",
+        "Tried and True"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 955,
+      "name": "Homemade Pita Bread",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 960,
+      "name": "Arugula Salad with Peaches, Goat Cheese and Basil",
+      "current_categories": [
+        "2- Summer",
+        "Cheap / Pantry Staples",
+        "Salad",
+        "Sides",
+        "Vegetarian",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday",
+        "Vegetarian",
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 973,
+      "name": "Greek Lemon Potatoes (6k reviews)",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 995,
+      "name": "Creamy Mashed Potatoes",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Entertaining",
+        "Sides"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Sides (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 998,
+      "name": "Brussels Sprout Salad with Lemon Parmesan Vinaigrette",
+      "current_categories": [
+        "Salad",
+        "Sides",
+        "Weekday"
+      ],
+      "add": [],
+      "remove": [
+        "Weekday"
+      ],
+      "reasoning": "Salad with entree-only categories. To be reviewed in dedicated salad pass."
+    },
+    {
+      "id": 999,
+      "name": "Simple Cheese Ball",
+      "current_categories": [
+        "Cheap / Pantry Staples",
+        "Entertaining",
+        "Snacks",
+        "Tried and True"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Snacks (not an entree). Removed entree-only categories."
+    },
+    {
+      "id": 1023,
+      "name": "Butter Swim Biscuits",
+      "current_categories": [
+        "Baking",
+        "Cheap / Pantry Staples",
+        "Sides",
+        "Try Soon"
+      ],
+      "add": [],
+      "remove": [
+        "Cheap / Pantry Staples"
+      ],
+      "reasoning": "Categorized as Baking (not an entree). Removed entree-only categories."
+    }
+  ]
+}
