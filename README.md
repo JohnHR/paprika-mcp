@@ -6,8 +6,8 @@ An MCP server that lets Claude query and manage your Paprika 3 recipe database f
 
 ### Read Tools
 - **browse_recipes** — Page through the full library with configurable sort (name, id, rating, preference_score, last_made, prep_time, cook_time) and pagination (offset/limit)
-- **search_recipes** — Search by keyword, category, and minimum preference score. Supports three sort strategies: `score_then_staleness` (default), `staleness` (never-made/oldest first), and `score` (pure favorites)
-- **get_recipe_details** — Get full recipe with ingredients and directions; accepts name (partial match) or source URL
+- **search_recipes** — Search by keyword, category, and minimum preference score (default 4 — pass `min_score=0` to include all recipes). Supports three sort strategies: `score_then_staleness` (default), `staleness` (never-made/oldest first), and `score` (pure favorites)
+- **get_recipe_details** — Get full recipe with ingredients and directions; accepts `recipe_id` (exact), `url` (source URL match), or `name` (partial match — returns a disambiguation list if multiple recipes match)
 - **get_meal_history** — See what you've cooked recently (based on dated menu categories)
 - **list_categories** — List all recipe categories with their IDs
 

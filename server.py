@@ -296,7 +296,11 @@ def search_recipes(
             A single distinctive word often works best (e.g. "shawarma" not
             "chicken shawarma").
         category: Optional category name to filter by (e.g. "Vegetarian", "Fish", "Chicken", "Dessert").
-        min_score: Minimum preference score (0-7). Preference score = star rating (0-5) + 1 if Tried and True + 1 if Favorited.
+        min_score: Minimum preference score (0-7). Preference score = star rating (0-5) + 1 if
+            Tried and True + 1 if Favorited. DEFAULT IS 4 — this filters out unrated and
+            low-scored recipes. Use min_score=0 to search all recipes regardless of score
+            (e.g. when browsing a category, checking if something exists, or the user
+            asks about a specific recipe they know they have).
         max_results: Maximum number of results to return (default 20).
         sort: Result ordering. One of:
             "score_then_staleness" (default) — highest preference score first,
@@ -372,26 +376,78 @@ def search_recipes(
 
 
 @mcp.tool()
-def get_recipe_details(recipe_name: str) -> str:
-    """Get full details for a specific recipe including ingredients and directions.
+def get_recipe_details(
+    recipe_id: int | None = None,
+    name: str | None = None,
+    url: str | None = None,
+) -> str:
+    """Get full details for a specific recipe including ingredients, directions, and categories.
+
+    Provide exactly one of: recipe_id, name, or url. When multiple lookup methods
+    are provided, priority is: recipe_id > url > name.
 
     Args:
-        recipe_name: The recipe name to look up (case-insensitive, partial match supported).
-            Also matches against the recipe's source URL, so you can pass a URL to
-            find a recipe that was imported from that site.
+        recipe_id: The recipe Z_PK ID for a direct, unambiguous lookup. Prefer this
+            when you already have the ID from search_recipes or browse_recipes.
+        name: Case-insensitive partial name match. If exactly one recipe matches,
+            returns full details. If multiple recipes match, returns a lightweight
+            disambiguation list (id, name, source_url, categories) — re-call with
+            recipe_id to get full details for the intended recipe.
+        url: Match against the recipe's source URL (the site it was imported from).
+            Strips query parameters for matching, so the base URL is sufficient.
     """
     conn = _get_db()
     try:
-        row = conn.execute(
-            "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND (ZNAME LIKE ? OR ZSOURCEURL LIKE ?) LIMIT 1",
-            (f"%{recipe_name}%", f"%{recipe_name}%"),
-        ).fetchone()
+        if recipe_id is not None:
+            row = conn.execute(
+                "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND Z_PK = ?",
+                (recipe_id,),
+            ).fetchone()
+            if not row:
+                return json.dumps({"error": f"No recipe found with ID {recipe_id}"})
+            return json.dumps(_recipe_to_dict(conn, row, include_full=True), indent=2)
 
-        if not row:
-            return json.dumps({"error": f"No recipe found matching '{recipe_name}'"})
+        if url is not None:
+            base_url = url.split("?")[0].split("#")[0].rstrip("/")
+            rows = conn.execute(
+                "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND ZSOURCEURL IS NOT NULL"
+            ).fetchall()
+            row = next(
+                (r for r in rows
+                 if (r["ZSOURCEURL"] or "").split("?")[0].split("#")[0].rstrip("/") == base_url),
+                None,
+            )
+            if not row:
+                return json.dumps({"error": f"No recipe found with URL '{url}'"})
+            return json.dumps(_recipe_to_dict(conn, row, include_full=True), indent=2)
 
-        recipe = _recipe_to_dict(conn, row, include_full=True)
-        return json.dumps(recipe, indent=2)
+        if name is not None:
+            rows = conn.execute(
+                "SELECT * FROM ZRECIPE WHERE ZINTRASH = 0 AND ZNAME LIKE ?",
+                (f"%{name}%",),
+            ).fetchall()
+            if not rows:
+                return json.dumps({"error": f"No recipe found matching name '{name}'"})
+            if len(rows) == 1:
+                return json.dumps(_recipe_to_dict(conn, rows[0], include_full=True), indent=2)
+            # Multiple matches — return a disambiguation list
+            matches = []
+            for row in rows:
+                categories, _ = _get_categories_for_recipe(conn, row["Z_PK"])
+                matches.append({
+                    "id": row["Z_PK"],
+                    "name": row["ZNAME"],
+                    "source_url": row["ZSOURCEURL"] or "",
+                    "categories": sorted(categories),
+                })
+            return json.dumps({
+                "multiple_matches": True,
+                "count": len(matches),
+                "message": f"{len(matches)} recipes match '{name}'. Re-call with recipe_id to get full details.",
+                "matches": matches,
+            }, indent=2)
+
+        return json.dumps({"error": "Provide at least one of: recipe_id, name, or url"})
     finally:
         conn.close()
 
@@ -399,6 +455,14 @@ def get_recipe_details(recipe_name: str) -> str:
 @mcp.tool()
 def get_meal_history(weeks_back: int = 8) -> str:
     """Get recent meal planning history showing what recipes were made and when.
+
+    Returns a list of past meal plans (date-based categories), newest first. Each entry
+    includes the date, label, list of recipe names, and category_id. The category_id can
+    be passed to add_recipe_to_category or remove_recipe_from_category to modify an
+    existing meal plan after the fact.
+
+    Use this to answer questions like "what have we been eating lately?", to avoid
+    repeating recent meals in a new plan, or to check when a specific recipe was last made.
 
     Args:
         weeks_back: How many weeks of history to return (default 8).
@@ -456,9 +520,14 @@ def create_meal_plan(
     the specified recipes with it. The app will be restarted automatically to
     display the new meal plan.
 
+    Idempotent: if a category with the same date and label already exists, it is
+    reused rather than duplicated — safe to call again to add more recipes to an
+    existing plan.
+
     Args:
         date_str: Date in YYYY-MM-DD format (e.g., "2026-02-15")
-        recipe_ids: List of recipe Z_PK IDs to include in the meal plan
+        recipe_ids: List of recipe Z_PK IDs to include. Get IDs from search_recipes
+            or browse_recipes (the "id" field in each result).
         label: Label for the meal (default "Menu", can be "Dinner", "BIRTHDAY menu", etc.)
 
     Returns:
@@ -593,12 +662,19 @@ def create_meal_plan(
 def add_recipe_to_category(recipe_ids: int | list[int], category_id: int) -> str:
     """Add recipe(s) to an existing category (tag the recipe(s) with the category).
 
+    Use list_categories to look up the category_id by name before calling this.
+    Already-linked recipes are silently skipped (idempotent).
+    Triggers a Paprika restart — batch all recipe IDs into a single call rather
+    than calling this in a loop.
+
     Args:
-        recipe_ids: The recipe Z_PK ID to add, or a list of recipe Z_PK IDs for bulk operation
-        category_id: The category Z_PK ID to add the recipe(s) to
+        recipe_ids: A single recipe Z_PK ID or a list of IDs for bulk operation.
+            Get IDs from search_recipes or browse_recipes (the "id" field).
+        category_id: The category Z_PK ID to add the recipe(s) to.
+            Get this from list_categories.
 
     Returns:
-        JSON with confirmation of the operation
+        JSON with added/skipped counts and category name confirmation
     """
     # Normalize to list
     if isinstance(recipe_ids, int):
@@ -676,12 +752,19 @@ def add_recipe_to_category(recipe_ids: int | list[int], category_id: int) -> str
 def remove_recipe_from_category(recipe_ids: int | list[int], category_id: int) -> str:
     """Remove recipe(s) from a category (untag the recipe(s) from the category).
 
+    Use list_categories to look up the category_id by name before calling this.
+    Recipes not currently in the category are silently skipped (idempotent).
+    Triggers a Paprika restart — batch all recipe IDs into a single call rather
+    than calling this in a loop.
+
     Args:
-        recipe_ids: The recipe Z_PK ID to remove, or a list of recipe Z_PK IDs for bulk operation
-        category_id: The category Z_PK ID to remove the recipe(s) from
+        recipe_ids: A single recipe Z_PK ID or a list of IDs for bulk operation.
+            Get IDs from search_recipes or browse_recipes (the "id" field).
+        category_id: The category Z_PK ID to remove the recipe(s) from.
+            Get this from list_categories.
 
     Returns:
-        JSON with confirmation of the operation
+        JSON with removed/skipped counts and category name confirmation
     """
     # Normalize to list
     if isinstance(recipe_ids, int):
@@ -751,8 +834,10 @@ def remove_recipe_from_category(recipe_ids: int | list[int], category_id: int) -
 def list_categories(query: str | None = None) -> str:
     """List all recipe categories with their IDs.
 
-    Returns regular categories (not date-based meal plans). Use the ID
-    to add/remove recipes from a category.
+    Returns regular tag categories only (date-based meal plans are excluded — use
+    get_meal_history for those). The returned ID is required by add_recipe_to_category,
+    remove_recipe_from_category, and delete_category. Call this first whenever you need
+    to operate on a category by name.
 
     Args:
         query: Optional substring to filter category names (case-insensitive).
@@ -782,14 +867,18 @@ def list_categories(query: str | None = None) -> str:
 def delete_category(category_id: int) -> str:
     """Delete a category and remove all recipe associations with it.
 
-    This will delete the category and clean up all references in the join table,
-    but will NOT delete the recipes themselves.
+    Deletes the category and cleans up all references in the join table.
+    Does NOT delete the recipes themselves — only the category tag is removed.
+    Works for both regular tag categories and date-based meal plan categories.
+
+    CONFIRM WITH THE USER before calling — this is irreversible.
+    Use list_categories (or get_meal_history for meal plans) to get the category_id.
 
     Args:
-        category_id: The category Z_PK ID to delete
+        category_id: The category Z_PK ID to delete.
 
     Returns:
-        JSON with confirmation of the operation
+        JSON with category name and count of recipe associations removed
     """
     _kill_paprika()
 
@@ -873,11 +962,15 @@ def delete_recipe(recipe_id: int) -> str:
     Soft-deletes the recipe so Paprika's sync engine propagates the deletion
     to other devices. Also removes all category associations.
 
+    CONFIRM WITH THE USER before calling — this is destructive. While Paprika's
+    trash can be manually emptied or recovered from, this cannot be undone from Claude.
+
     Args:
-        recipe_id: The recipe Z_PK ID to delete
+        recipe_id: The recipe Z_PK ID to delete. Get this from search_recipes or
+            browse_recipes (the "id" field).
 
     Returns:
-        JSON with confirmation of the operation
+        JSON with recipe name and count of category associations removed
     """
     _kill_paprika()
 
