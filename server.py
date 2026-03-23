@@ -50,7 +50,7 @@ list chicken as an ingredient.
 - Use the category parameter to filter by type (e.g. "Vegetarian", "Fish", \
 "Chicken", "Dessert"). Use the query parameter for specific ingredients or dishes.
 - For "what should we make?" questions, use min_score=4 to surface family \
-favorites. For broader exploration, use the default (0).
+favorites. For broader exploration, use the default (4).
 
 PREFERENCE SCORES:
 - Score ranges 0-7: star rating (0-5) + 1 if "Tried and True" + 1 if Favorited.
@@ -59,15 +59,22 @@ then by staleness (longest since last made first).
 - days_since_last_made is valuable context. Mention it naturally when presenting \
 options ("you haven't made X in 3 months").
 
+MEAL PLAN BALANCE:
+- Before finalising a plan, check that it includes at least 1-2 "Weekday" \
+recipes (quick, low-effort) and at least 1-2 "Cheap / Pantry Staples" recipes. \
+Not every meal needs to be easy or cheap, but a plan with all Sunday Dishes or \
+all expensive ingredients is unbalanced. Call this out and suggest a swap if needed.
+
 CATEGORIES & MEAL PLANS:
 - Categories are tags — a recipe can belong to many. Regular categories \
 (Chicken, Vegetarian, etc.) classify recipes. Date-based categories \
 (YYYYMMDD Label) ARE meal plans.
 - Use label "Menu" for normal meal plans. Use descriptive labels for special \
 occasions ("Birthday dinner", "Thanksgiving").
-- add_recipe_to_category / remove_recipe_from_category are for editing EXISTING \
-meal plans or managing recipe tags. Don't use them to build a new meal plan \
-one recipe at a time — use create_meal_plan instead.
+- add_recipe_to_category / remove_recipe_from_category support both single recipe IDs \
+and bulk lists. For bulk operations, pass a list of recipe IDs (e.g., [123, 456, 789]). \
+Bulk operations batch all changes in a single Paprika kill/restart cycle, ensuring proper \
+sync to other devices. Use these for any category modifications — never write custom scripts.
 - delete_category removes a meal plan or tag entirely. Confirm with the user first.
 """)
 
@@ -275,7 +282,7 @@ def browse_recipes(
 def search_recipes(
     query: str | None = None,
     category: str | None = None,
-    min_score: int = 0,
+    min_score: int = 4,
     max_results: int = 20,
     sort: str = "score_then_staleness",
 ) -> str:
@@ -583,127 +590,57 @@ def create_meal_plan(
 
 
 @mcp.tool()
-def add_recipe_to_category(recipe_id: int, category_id: int) -> str:
-    """Add a recipe to an existing category (tag the recipe with the category).
+def add_recipe_to_category(recipe_ids: int | list[int], category_id: int) -> str:
+    """Add recipe(s) to an existing category (tag the recipe(s) with the category).
 
     Args:
-        recipe_id: The recipe Z_PK ID to add
-        category_id: The category Z_PK ID to add the recipe to
+        recipe_ids: The recipe Z_PK ID to add, or a list of recipe Z_PK IDs for bulk operation
+        category_id: The category Z_PK ID to add the recipe(s) to
 
     Returns:
         JSON with confirmation of the operation
     """
+    # Normalize to list
+    if isinstance(recipe_ids, int):
+        recipe_ids = [recipe_ids]
+
     _kill_paprika()
 
     conn = _get_db(read_only=False)
     try:
         cursor = conn.cursor()
 
-        # Check if the relationship already exists
-        existing = cursor.execute(
-            """
-            SELECT * FROM Z_12CATEGORIES
-            WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
-            """,
-            (recipe_id, category_id),
-        ).fetchone()
+        added = 0
+        skipped = 0
+        affected_recipes = set()
 
-        if existing:
-            recipe = cursor.execute(
-                "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
-            ).fetchone()
-            category = cursor.execute(
-                "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        for recipe_id in recipe_ids:
+            # Check if the relationship already exists
+            existing = cursor.execute(
+                """
+                SELECT * FROM Z_12CATEGORIES
+                WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
+                """,
+                (recipe_id, category_id),
             ).fetchone()
 
-            conn.close()
-            _open_paprika()
-            return json.dumps({
-                "success": False,
-                "message": f"Recipe '{recipe['ZNAME'].rstrip('.')}' is already in category '{category['ZNAME']}'",
-            })
+            if existing:
+                skipped += 1
+                continue
 
-        # Add the relationship
-        cursor.execute(
-            """
-            INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
-            VALUES (?, ?)
-            """,
-            (recipe_id, category_id),
-        )
+            # Add the relationship
+            cursor.execute(
+                """
+                INSERT INTO Z_12CATEGORIES (Z_12RECIPES, Z_13CATEGORIES)
+                VALUES (?, ?)
+                """,
+                (recipe_id, category_id),
+            )
+            added += 1
+            affected_recipes.add(recipe_id)
 
-        # Mark recipe as needing sync so the association propagates.
-        cursor.execute(
-            """
-            UPDATE ZRECIPE
-            SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
-                ZSTATUS = 'modified', ZSYNCHASH = ?
-            WHERE Z_PK = ?
-            """,
-            (_new_sync_hash(), recipe_id),
-        )
-        conn.commit()
-
-        # Get names for confirmation
-        recipe = cursor.execute(
-            "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
-        ).fetchone()
-        category = cursor.execute(
-            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
-        ).fetchone()
-
-        result = {
-            "success": True,
-            "recipe_name": recipe["ZNAME"].rstrip("."),
-            "category_name": category["ZNAME"],
-        }
-
-    finally:
-        conn.close()
-
-    _open_paprika()
-    result["app_restarted"] = True
-    return json.dumps(result, indent=2)
-
-
-@mcp.tool()
-def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
-    """Remove a recipe from a category (untag the recipe from the category).
-
-    Args:
-        recipe_id: The recipe Z_PK ID to remove
-        category_id: The category Z_PK ID to remove the recipe from
-
-    Returns:
-        JSON with confirmation of the operation
-    """
-    _kill_paprika()
-
-    conn = _get_db(read_only=False)
-    try:
-        cursor = conn.cursor()
-
-        # Get names before deleting
-        recipe = cursor.execute(
-            "SELECT ZNAME FROM ZRECIPE WHERE Z_PK = ?", (recipe_id,)
-        ).fetchone()
-        category = cursor.execute(
-            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
-        ).fetchone()
-
-        # Delete the relationship
-        cursor.execute(
-            """
-            DELETE FROM Z_12CATEGORIES
-            WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
-            """,
-            (recipe_id, category_id),
-        )
-
-        deleted_count = cursor.rowcount
-
-        # Mark recipe as needing sync so the removal propagates.
-        if deleted_count > 0:
+        # Mark all affected recipes as needing sync
+        for recipe_id in affected_recipes:
             cursor.execute(
                 """
                 UPDATE ZRECIPE
@@ -716,11 +653,90 @@ def remove_recipe_from_category(recipe_id: int, category_id: int) -> str:
 
         conn.commit()
 
+        category = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        ).fetchone()
+
         result = {
-            "success": deleted_count > 0,
-            "recipe_name": recipe["ZNAME"].rstrip(".") if recipe else None,
+            "success": added > 0,
+            "added": added,
+            "skipped": skipped,
             "category_name": category["ZNAME"] if category else None,
-            "message": "Removed recipe from category" if deleted_count > 0 else "Recipe was not in this category",
+        }
+
+    finally:
+        conn.close()
+
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+def remove_recipe_from_category(recipe_ids: int | list[int], category_id: int) -> str:
+    """Remove recipe(s) from a category (untag the recipe(s) from the category).
+
+    Args:
+        recipe_ids: The recipe Z_PK ID to remove, or a list of recipe Z_PK IDs for bulk operation
+        category_id: The category Z_PK ID to remove the recipe(s) from
+
+    Returns:
+        JSON with confirmation of the operation
+    """
+    # Normalize to list
+    if isinstance(recipe_ids, int):
+        recipe_ids = [recipe_ids]
+
+    _kill_paprika()
+
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        removed = 0
+        skipped = 0
+        affected_recipes = set()
+
+        for recipe_id in recipe_ids:
+            # Delete the relationship
+            cursor.execute(
+                """
+                DELETE FROM Z_12CATEGORIES
+                WHERE Z_12RECIPES = ? AND Z_13CATEGORIES = ?
+                """,
+                (recipe_id, category_id),
+            )
+
+            deleted_count = cursor.rowcount
+            if deleted_count > 0:
+                removed += 1
+                affected_recipes.add(recipe_id)
+            else:
+                skipped += 1
+
+        # Mark all affected recipes as needing sync
+        for recipe_id in affected_recipes:
+            cursor.execute(
+                """
+                UPDATE ZRECIPE
+                SET Z_OPT = Z_OPT + 1, ZISSYNCED = 0,
+                    ZSTATUS = 'modified', ZSYNCHASH = ?
+                WHERE Z_PK = ?
+                """,
+                (_new_sync_hash(), recipe_id),
+            )
+
+        conn.commit()
+
+        category = cursor.execute(
+            "SELECT ZNAME FROM ZRECIPECATEGORY WHERE Z_PK = ?", (category_id,)
+        ).fetchone()
+
+        result = {
+            "success": removed > 0,
+            "removed": removed,
+            "skipped": skipped,
+            "category_name": category["ZNAME"] if category else None,
         }
 
     finally:
@@ -840,6 +856,91 @@ def delete_category(category_id: int) -> str:
             "category_name": category_name,
             "recipes_unlinked": recipes_unlinked,
             "message": f"Deleted category '{category_name}' and unlinked {recipes_unlinked} recipe(s)",
+        }
+
+    finally:
+        conn.close()
+
+    _open_paprika()
+    result["app_restarted"] = True
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+def delete_recipe(recipe_id: int) -> str:
+    """Delete a recipe from the Paprika library (moves it to trash).
+
+    Soft-deletes the recipe so Paprika's sync engine propagates the deletion
+    to other devices. Also removes all category associations.
+
+    Args:
+        recipe_id: The recipe Z_PK ID to delete
+
+    Returns:
+        JSON with confirmation of the operation
+    """
+    _kill_paprika()
+
+    conn = _get_db(read_only=False)
+    try:
+        cursor = conn.cursor()
+
+        # Verify recipe exists and isn't already trashed
+        recipe = cursor.execute(
+            "SELECT ZNAME, ZINTRASH FROM ZRECIPE WHERE Z_PK = ?",
+            (recipe_id,),
+        ).fetchone()
+
+        if not recipe:
+            conn.close()
+            _open_paprika()
+            return json.dumps({
+                "success": False,
+                "message": f"Recipe with ID {recipe_id} not found",
+            })
+
+        if recipe["ZINTRASH"] == 1:
+            conn.close()
+            _open_paprika()
+            return json.dumps({
+                "success": False,
+                "message": f"Recipe '{recipe['ZNAME'].rstrip('.')}' is already in trash",
+            })
+
+        recipe_name = recipe["ZNAME"].rstrip(".")
+
+        # Remove all category associations
+        categories_removed = cursor.execute(
+            "SELECT COUNT(*) as cnt FROM Z_12CATEGORIES WHERE Z_12RECIPES = ?",
+            (recipe_id,),
+        ).fetchone()["cnt"]
+        cursor.execute(
+            "DELETE FROM Z_12CATEGORIES WHERE Z_12RECIPES = ?",
+            (recipe_id,),
+        )
+
+        # Soft-delete the recipe
+        cursor.execute(
+            """
+            UPDATE ZRECIPE
+            SET ZINTRASH = 1,
+                ZSTATUS = 'deleted',
+                ZISSYNCED = 0,
+                Z_OPT = Z_OPT + 1,
+                ZSYNCHASH = ?
+            WHERE Z_PK = ?
+            """,
+            (_new_sync_hash(), recipe_id),
+        )
+
+        conn.commit()
+
+        result = {
+            "success": True,
+            "recipe_name": recipe_name,
+            "recipe_id": recipe_id,
+            "categories_removed": categories_removed,
+            "message": f"Deleted '{recipe_name}' and removed {categories_removed} category link(s)",
         }
 
     finally:
@@ -1032,7 +1133,7 @@ def import_recipe(
 
     DUPLICATE HANDLING: This tool automatically checks if the URL already
     exists in the library before importing. If it does, it skips the import
-    and adds the existing recipe to "AAA Up Next" instead. There is no need
+    and adds the existing recipe to "Try Soon" instead. There is no need
     to search for the recipe first — just call this tool directly with the URL.
 
     Args:
@@ -1048,7 +1149,7 @@ def import_recipe(
         recipe_name = (existing["ZNAME"] or "").rstrip(".")
         cats_to_add = list(categories or [])
         # Always add to Up Next for existing recipes
-        cats_to_add.append("AAA Up Next")
+        cats_to_add.append("Try Soon")
         # Deduplicate
         seen = set()
         unique_cats = []
