@@ -7,16 +7,17 @@ An MCP server that lets Claude query and manage your Paprika 3 recipe database f
 ### Read Tools
 - **browse_recipes** — Page through the full library with configurable sort (name, id, rating, preference_score, last_made, prep_time, cook_time) and pagination (offset/limit)
 - **search_recipes** — Search by keyword, category, and minimum preference score. Supports three sort strategies: `score_then_staleness` (default), `staleness` (never-made/oldest first), and `score` (pure favorites)
-- **get_recipe_details** — Get full recipe with ingredients and directions
+- **get_recipe_details** — Get full recipe with ingredients and directions; accepts name (partial match) or source URL
 - **get_meal_history** — See what you've cooked recently (based on dated menu categories)
 - **list_categories** — List all recipe categories with their IDs
 
 ### Write Tools
 - **create_meal_plan** — Create a new date-based meal plan by tagging recipes with a category (automatically restarts Paprika)
 - **import_recipe** — Import a recipe from a URL using Paprika's built-in browser/scraper (auto-deduplicates)
-- **add_recipe_to_category** — Add a recipe to an existing category
-- **remove_recipe_from_category** — Remove a recipe from a category
+- **add_recipe_to_category** — Add one or more recipes to an existing category (accepts a single ID or a list for bulk operations)
+- **remove_recipe_from_category** — Remove one or more recipes from a category (accepts a single ID or a list for bulk operations)
 - **delete_category** — Delete a category and all its recipe associations
+- **delete_recipe** — Move a recipe to trash (soft-delete; syncs deletion to other devices and removes all category associations)
 
 ### Preference Score (0–7)
 
