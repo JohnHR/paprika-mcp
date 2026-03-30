@@ -76,6 +76,19 @@ and bulk lists. For bulk operations, pass a list of recipe IDs (e.g., [123, 456,
 Bulk operations batch all changes in a single Paprika kill/restart cycle, ensuring proper \
 sync to other devices. Use these for any category modifications — never write custom scripts.
 - delete_category removes a meal plan or tag entirely. Confirm with the user first.
+
+IMPORTING RECIPES:
+When the user asks to import a recipe from a URL:
+1. Call import_recipe with the URL (no categories yet).
+2. Call get_recipe_details on the returned recipe_id to see ingredients and directions.
+3. Call get_category_definitions to load the category rules.
+4. Reason across the definitions and suggest appropriate categories with a brief \
+justification for each.
+5. NEVER call add_recipe_to_category until the user has approved or revised the \
+suggestion. Present the list and wait.
+
+If given multiple URLs, process them one at a time — complete the full \
+import → suggest → approve cycle for each URL before starting the next.
 """)
 
 # --- Helpers ---
@@ -86,7 +99,7 @@ _DATE_RE = re.compile(r"^(?:zz)?(\d{8})\b")
 def _get_db(read_only: bool = True) -> sqlite3.Connection:
     """Open a connection to the Paprika database."""
     if read_only:
-        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=5.0)
     else:
         conn = sqlite3.connect(DB_PATH)
         conn.execute("PRAGMA busy_timeout = 5000")
@@ -1211,6 +1224,21 @@ def _find_recipe_by_url(url: str) -> dict | None:
 
 # Category ID for "AAA Up Next" — the default triage category for incoming recipes.
 _UP_NEXT_CATEGORY_ID = 8
+
+
+@mcp.tool()
+def get_category_definitions() -> str:
+    """Return the category definitions used for classifying recipes.
+
+    Returns the full set of assignable categories with their definitions, signals,
+    and edge-case notes. Also includes the skip_categories list (categories that
+    should never be assigned by Claude — only by the user manually).
+
+    Call this when suggesting categories for a newly imported recipe, before
+    calling add_recipe_to_category.
+    """
+    definitions_path = Path(__file__).parent / "data" / "category_definitions.json"
+    return definitions_path.read_text(encoding="utf-8")
 
 
 @mcp.tool()

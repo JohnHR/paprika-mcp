@@ -10,6 +10,7 @@ An MCP server that lets Claude query and manage your Paprika 3 recipe database f
 - **get_recipe_details** — Get full recipe with ingredients and directions; accepts `recipe_id` (exact), `url` (source URL match), or `name` (partial match — returns a disambiguation list if multiple recipes match)
 - **get_meal_history** — See what you've cooked recently (based on dated menu categories)
 - **list_categories** — List all recipe categories with their IDs
+- **get_category_definitions** — Return the full category definitions JSON (names, rules, signals, edge cases) used for classifying recipes
 
 ### Write Tools
 - **create_meal_plan** — Create a new date-based meal plan by tagging recipes with a category (automatically restarts Paprika)
