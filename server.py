@@ -187,6 +187,19 @@ def _preference_score(
     return score
 
 
+_CORE_DATA_EPOCH = datetime(2001, 1, 1)
+
+
+def _core_data_ts_to_iso(ts) -> str | None:
+    """Convert a Core Data timestamp (seconds since 2001-01-01) to an ISO date string."""
+    if ts is None:
+        return None
+    try:
+        return (_CORE_DATA_EPOCH + timedelta(seconds=float(ts))).date().isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
 def _recipe_to_dict(
     conn: sqlite3.Connection, row: sqlite3.Row, include_full: bool = False
 ) -> dict:
@@ -207,6 +220,7 @@ def _recipe_to_dict(
         "cook_time": row["ZCOOKTIME"] or None,
         "prep_time": row["ZPREPTIME"] or None,
         "servings": row["ZSERVINGS"] or None,
+        "date_added": _core_data_ts_to_iso(row["ZCREATED"]),
         "last_made_date": last_made_date,
         "days_since_last_made": days_since,
         "notes": row["ZNOTES"] or None,
@@ -237,13 +251,14 @@ def browse_recipes(
 
     Args:
         sort: Field to sort by. One of: "name", "id", "rating",
-            "preference_score", "last_made", "prep_time", "cook_time".
+            "preference_score", "last_made", "prep_time", "cook_time",
+            "date_added" (when the recipe was imported, newest first when desc).
         order: Sort direction — "asc" (ascending) or "desc" (descending).
         offset: Number of recipes to skip (0-based). Use for pagination.
         limit: Maximum number of recipes to return (default 100, max 500).
     """
     VALID_SORTS = {"name", "id", "rating", "preference_score", "last_made",
-                   "prep_time", "cook_time"}
+                   "prep_time", "cook_time", "date_added"}
     if sort not in VALID_SORTS:
         return json.dumps({"error": f"Invalid sort '{sort}'. Must be one of: {', '.join(sorted(VALID_SORTS))}"})
     if order not in ("asc", "desc"):
@@ -275,6 +290,8 @@ def browse_recipes(
                 return r["prep_time"] or ""
             elif sort == "cook_time":
                 return r["cook_time"] or ""
+            elif sort == "date_added":
+                return r["date_added"] or ""
             return r["name"].lower()
 
         recipes.sort(key=_sort_key, reverse=(order == "desc"))
@@ -323,6 +340,8 @@ def search_recipes(
                 Use for "something we haven't made in a while" or "something new".
             "score" — highest preference score first, ignoring staleness.
                 Use for "our absolute favorites".
+            "date_added" — most recently imported recipes first, regardless of
+                score or staleness. Use for "recipes I added recently".
     """
     conn = _get_db()
     try:
@@ -371,6 +390,11 @@ def search_recipes(
         elif sort == "score":
             recipes.sort(
                 key=lambda r: r["preference_score"],
+                reverse=True,
+            )
+        elif sort == "date_added":
+            recipes.sort(
+                key=lambda r: r["date_added"] or "",
                 reverse=True,
             )
         else:  # score_then_staleness (default)
