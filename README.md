@@ -26,6 +26,12 @@ Each recipe gets a composite score: star rating (0–5) + 1 if in "Tried and Tru
 
 ## Setup
 
+### 0. Prerequisites
+
+- **macOS only** — the import workflow uses AppleScript to drive Paprika's UI
+- **Paprika 3 for Mac** installed with your recipe library synced
+- **Claude Desktop** installed
+
 ### 1. Install uv
 
 ```bash
@@ -34,24 +40,32 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 2. Add to Claude Desktop
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+From inside the cloned repo, run this to print the exact config snippet with the correct path:
 
-```json
-{
+```bash
+echo '{
   "mcpServers": {
     "paprika": {
       "command": "uv",
-      "args": ["--directory", "/Users/YOUR_USERNAME/Desktop/Claude/paprika-mcp", "run", "server.py"]
+      "args": ["--directory", "'"$(pwd)"'", "run", "server.py"]
     }
   }
-}
+}'
 ```
 
-Replace `YOUR_USERNAME` with your macOS username.
+Paste the output into `~/Library/Application Support/Claude/claude_desktop_config.json`. If the file already has other MCP servers, add just the `"paprika": { ... }` block inside the existing `"mcpServers"` object.
 
 ### 3. Restart Claude Desktop
 
 The Paprika tools will now be available in any conversation.
+
+### 4. Category definitions
+
+The repo includes `data/category_definitions.json`, which tells Claude what each category means when suggesting categories for imported recipes. **If you're setting this up on a second machine that shares the same Paprika library** (e.g., a spouse's Mac with the same synced recipe collection), no action needed — the included file is correct.
+
+If you're starting from a different Paprika library with different categories, ask Claude to generate a new one:
+
+> "My Paprika categories don't match the included category_definitions.json. Call list_categories to see what I actually have, then rewrite data/category_definitions.json to match."
 
 ## Example prompts
 
